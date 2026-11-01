@@ -105,7 +105,7 @@ export default function Navbar({
               </>
             ) : (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-secondary transition focus:outline-none focus:ring-2 focus:ring-ring">
                     <Avatar className="h-8 w-8 border-2 border-white ring-2 ring-primary/20">
                       <AvatarImage src={userImage} alt={userName} />
