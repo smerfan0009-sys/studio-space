@@ -68,7 +68,7 @@ export default function Hero() {
   return (
     <MotionConfig reducedMotion="user">
       <section className="relative w-full overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pt-12 lg:pb-20 lg:pt-16">
-        <div className="mx-auto w-full max-w-8xl">
+        <div className="mx-auto w-full max-w-7xl">
           {/* Main Hero */}
           <div className="relative grid min-h-[540px] items-center gap-10 overflow-hidden rounded-[2rem] border border-border/60 bg-card p-6 shadow-sm sm:p-10 lg:min-h-[570px] lg:grid-cols-[1fr_0.95fr] lg:gap-8 lg:p-12">
             {/* Decorative background */}
