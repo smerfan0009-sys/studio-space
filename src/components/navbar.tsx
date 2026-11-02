@@ -1,10 +1,18 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
-import { Aperture, Menu, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { MotionConfig, motion } from "motion/react";
+import { Aperture, ChevronDown, Menu } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -14,7 +22,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "./ThemeToggle"; // ThemeToggle import kora holo
+import { ThemeToggle } from "./ThemeToggle";
+
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+
+const PILL_TRANSITION = {
+  type: "spring",
+  stiffness: 400,
+  damping: 32,
+} as const;
+
+const links = [
+  { label: "Home", href: "/" },
+  { label: "Explore Studios", href: "/studios" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "About Us", href: "/#about" },
+];
+
+const accountLinks = [
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Add New Studio", href: "/studios/new" },
+  { label: "My Studio Listings", href: "/my-studios" },
+  { label: "My Bookings", href: "/my-bookings" },
+];
+
+function isActivePath(pathname: string, href: string) {
+  // Hash links are in-page anchors, not routes, so they never claim active state.
+  if (href.startsWith("/#")) return false;
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export interface NavbarProps {
   isAuthenticated?: boolean;
@@ -27,168 +64,218 @@ export default function Navbar({
   userName = "Alex",
   userImage = "",
 }: NavbarProps) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
-  // Handle scroll effect
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const links = [
-    { label: "Home", href: "/" },
-    { label: "Explore Studios", href: "/studios" },
-    { label: "How It Works", href: "/#how-it-works" },
-    { label: "About Us", href: "/#about" },
-  ];
+  const activeHref =
+    links.find((link) => isActivePath(pathname, link.href))?.href ?? null;
+  const indicatedHref = hoveredHref ?? activeHref;
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "bg-white/90 dark:bg-gray-900/90 shadow-xl shadow-black/5 dark:shadow-black/40 border-b border-border/60"
-          : "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-border/40"
-      }`}
-    >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+    <MotionConfig reducedMotion="user">
+      <motion.header
+        initial={{ y: -16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: EASE_OUT }}
+        className="sticky top-3 z-50 w-full px-4 sm:px-6"
+      >
+        <div
+          className={cn(
+            "mx-auto flex w-full items-center justify-between gap-3 rounded-full border border-border/70 bg-background/95 pl-3.5 pr-2 backdrop-blur-md transition-[height,max-width,box-shadow,background-color] duration-300 ease-out sm:pl-5",
+            scrolled
+              ? "h-14 max-w-5xl bg-background/[0.98] shadow-xl shadow-black/10 dark:shadow-black/50"
+              : "h-16 max-w-6xl shadow-lg shadow-black/5 dark:shadow-black/40",
+          )}
+        >
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="rounded-xl bg-primary p-2 shadow-lg shadow-primary/20 group-hover:shadow-primary/30 transition-transform duration-300 group-hover:scale-105">
-              <Aperture className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-xl font-bold tracking-tight text-foreground font-heading">
+          <Link
+            href="/"
+            className="group flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <span className="rounded-xl bg-primary p-2 text-primary-foreground shadow-sm">
+              <Aperture className="h-5 w-5 transition-transform duration-300 ease-out group-hover:rotate-45" />
+            </span>
+            <span className="flex flex-col leading-none">
+              <span className="font-heading text-lg font-bold tracking-tight text-foreground">
                 StudioSpace
               </span>
-              <span className="text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground">
+              <span className="hidden text-[10px] font-medium tracking-[0.15em] text-muted-foreground uppercase sm:block">
                 Creative Marketplace
               </span>
-            </div>
+            </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors relative after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-primary after:transition-all after:duration-300"
-              >
-                {l.label}
-              </Link>
-            ))}
+          {/* Desktop navigation */}
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-1 md:flex"
+            onMouseLeave={() => setHoveredHref(null)}
+          >
+            {links.map((link) => {
+              const active = isActivePath(pathname, link.href);
+              const indicated = indicatedHref === link.href;
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  onMouseEnter={() => setHoveredHref(link.href)}
+                  onFocus={() => setHoveredHref(link.href)}
+                  onBlur={() => setHoveredHref(null)}
+                  className={cn(
+                    "relative rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    active || indicated
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {indicated && (
+                    <motion.span
+                      layoutId="navbar-active"
+                      aria-hidden="true"
+                      transition={PILL_TRANSITION}
+                      className="absolute inset-0 rounded-full bg-secondary"
+                    />
+                  )}
+                  <span className="relative z-10">{link.label}</span>
+                </Link>
+              );
+            })}
           </nav>
 
-          {/* Auth & Theme Toggle */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Theme Toggle Component */}
+          {/* Desktop actions */}
+          <div className="hidden items-center gap-1.5 md:flex">
             <ThemeToggle />
 
             {!isAuthenticated ? (
               <>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="text-foreground/80 hover:text-foreground hover:bg-secondary"
+                  size="lg"
+                  className="rounded-full px-4 text-muted-foreground hover:text-foreground"
                 >
                   Login
                 </Button>
-                <Button
-                  size="sm"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full px-5"
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
                 >
-                  Register
-                </Button>
+                  <Button size="lg" className="rounded-full px-5 shadow-sm">
+                    Register
+                  </Button>
+                </motion.div>
               </>
             ) : (
               <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <button className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-secondary transition focus:outline-none focus:ring-2 focus:ring-ring">
-                    <Avatar className="h-8 w-8 border-2 border-white ring-2 ring-primary/20">
-                      <AvatarImage src={userImage} alt={userName} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-                        {userName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{userName}</span>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
+                <DropdownMenuTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    />
+                  }
+                >
+                  <Avatar className="h-8 w-8 border border-border ring-2 ring-primary/15">
+                    <AvatarImage src={userImage} alt={userName} />
+                    <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
+                      {userName[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{userName}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 rounded-2xl border-border/60 shadow-xl bg-white/95 dark:bg-gray-900/95 backdrop-blur"
+                  sideOffset={10}
+                  className="w-56 rounded-2xl p-1.5 shadow-xl"
                 >
-                  <DropdownMenuLabel className="font-heading text-lg">
+                  <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
                     {userName}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/studios/new">Add New Studio</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/my-studios">My Studio Listings</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/my-bookings">My Bookings</Link>
-                  </DropdownMenuItem>
+                  {accountLinks.map((item) => (
+                    <DropdownMenuItem
+                      key={item.href}
+                      render={<Link href={item.href} />}
+                      className="rounded-lg px-2 py-1.5"
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/logout">
-                      <span className="text-destructive font-medium">
-                        Logout
-                      </span>
-                    </Link>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    render={<Link href="/logout" />}
+                    className="rounded-lg px-2 py-1.5"
+                  >
+                    Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
           </div>
 
-          {/* Mobile Sheet Nav */}
-          <div className="flex md:hidden items-center gap-2">
-            {/* Mobile Theme Toggle Component */}
+          {/* Mobile actions */}
+          <div className="flex items-center gap-1.5 md:hidden">
             <ThemeToggle />
 
             <Sheet>
               <SheetTrigger asChild>
                 <button
-                  className="p-2.5 rounded-2xl hover:bg-secondary/70 transition shadow-sm"
+                  type="button"
                   aria-label="Open menu"
+                  className="flex h-9 w-9 items-center justify-center rounded-full outline-none transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <Menu className="h-5 w-5 text-foreground" />
                 </button>
               </SheetTrigger>
               <SheetContent
                 side="right"
-                className="w-[340px] sm:w-[420px] bg-gradient-to-b from-[#faf8f5]/98 to-[#f2f0eb]/95 dark:from-gray-900/98 dark:to-gray-950/95 backdrop-blur-2xl border-l border-border/50 rounded-l-[2rem] shadow-2xl"
+                className="border-l border-border/60 bg-background! sm:bg-background!"
               >
-                <div className="flex flex-col gap-1 pt-6 overflow-y-auto">
-                  {links.map((l) => (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className="text-lg font-medium text-foreground/90 py-3 hover:text-primary transition border-b border-border/30"
-                    >
-                      {l.label}
-                    </Link>
-                  ))}
-                </div>
+                <nav aria-label="Mobile" className="flex flex-col gap-1 pt-2">
+                  {links.map((link) => {
+                    const active = isActivePath(pathname, link.href);
+
+                    return (
+                      <SheetClose asChild key={link.href}>
+                        <Link
+                          href={link.href}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "rounded-xl px-3 py-3 text-base font-medium transition-colors",
+                            active
+                              ? "bg-secondary text-foreground"
+                              : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                          )}
+                        >
+                          {link.label}
+                        </Link>
+                      </SheetClose>
+                    );
+                  })}
+                </nav>
+
                 <div className="mt-8 flex flex-col gap-3">
                   {!isAuthenticated ? (
                     <>
                       <Button
                         variant="outline"
-                        className="w-full rounded-full h-12 shadow-sm"
+                        className="h-11 w-full rounded-full shadow-sm"
                       >
                         Login
                       </Button>
-                      <Button className="w-full rounded-full bg-primary text-primary-foreground h-12 shadow-xl shadow-primary/20">
+                      <Button className="h-11 w-full rounded-full shadow-sm">
                         Register
                       </Button>
                     </>
@@ -196,11 +283,11 @@ export default function Navbar({
                     <>
                       <Button
                         variant="outline"
-                        className="w-full rounded-full h-12 shadow-sm"
+                        className="h-11 w-full rounded-full shadow-sm"
                       >
                         Dashboard
                       </Button>
-                      <Button className="w-full rounded-full bg-primary text-primary-foreground h-12 shadow-xl shadow-primary/20">
+                      <Button className="h-11 w-full rounded-full shadow-sm">
                         Add New Studio
                       </Button>
                     </>
@@ -210,7 +297,7 @@ export default function Navbar({
             </Sheet>
           </div>
         </div>
-      </div>
-    </header>
+      </motion.header>
+    </MotionConfig>
   );
 }

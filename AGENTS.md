@@ -27,3 +27,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## AGENTS.md rule
 - `next dev` auto-inserts the block above. Don't delete it from diffs — it recreates uncommitted. Commit it together with your changes so the tree stays clean.
+
+## Current repo state (verified)
+- shadcn/ui initialized (`components.json`; `src/components/ui/` includes `button`, `card`, `badge`, `avatar`, `dropdown-menu`, `sheet`, `input`); `cn` package (not clsx+tailwind-merge directly) provides `src/lib/utils.ts`.
+- Theme: `ThemeToggle` component toggles `.dark` class; palette is indigo (`#6366F1`) primary + pink (`#F472B6`) accent on warm ivory (`#F6F4F0`) / dark ink (`#12111A`). Fonts: Inter (body) + Playfair Display (headings) via `next/font/google`.
+- Mobile nav: shadcn `Sheet` (`src/components/ui/sheet.tsx`) slide-out from right; desktop nav unchanged.
+- Page entry: `src/app/page.tsx` currently navbar-only (other sections rebuilt earlier but some lost — recreate from `opencode/plan/` build scripts if needed). `src/lib/api/README.md` reserved for MongoDB/API.
+- Images: Unsplash URLs direct; `next/image` not used (lint warning). `swiper` installed for hero slider.
+- Commands: `npm run dev` / `build` / `lint`. No test suite.
+- Build: passes TypeScript + static prerender (`/`) verified as of latest run.

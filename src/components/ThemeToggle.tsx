@@ -5,7 +5,6 @@ import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  // Lazy initial state: localStorage ba system preference theke initial value set kora
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -13,7 +12,6 @@ export function ThemeToggle() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
 
-  // Shudhu theme change hole DOM ebong localStorage update hobe (konokono setState nei)
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
