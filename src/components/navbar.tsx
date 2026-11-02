@@ -2,26 +2,34 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MotionConfig, motion } from "motion/react";
-import { Aperture, ChevronDown, Menu } from "lucide-react";
+import { Aperture, ChevronDown, Menu, LogOut } from "lucide-react";
+
 import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
+
 import { Button } from "@/components/ui/button";
+
 import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { ThemeToggle } from "./ThemeToggle";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
@@ -41,43 +49,114 @@ const links = [
 
 const accountLinks = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Add New Studio", href: "/studios/new" },
-  { label: "My Studio Listings", href: "/my-studios" },
+  { label: "Add New Studio", href: "/add-studio" },
+  { label: "My Studio Listings", href: "/my-listings" },
   { label: "My Bookings", href: "/my-bookings" },
 ];
 
 function isActivePath(pathname: string, href: string) {
-  // Hash links are in-page anchors, not routes, so they never claim active state.
   if (href.startsWith("/#")) return false;
-  if (href === "/") return pathname === "/";
+
+  if (href === "/") {
+    return pathname === "/";
+  }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export interface NavbarProps {
-  isAuthenticated?: boolean;
-  userName?: string;
-  userImage?: string;
-}
-
-export default function Navbar({
-  isAuthenticated = false,
-  userName = "Alex",
-  userImage = "",
-}: NavbarProps) {
+export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [scrolled, setScrolled] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  // Better Auth session
+  const { data: session, isPending } = authClient.useSession();
+
+  const user = session?.user;
+  const isAuthenticated = Boolean(user);
+
+  const userName = user?.name || "User";
+  const userImage = user?.image || "";
 
   const activeHref =
     links.find((link) => isActivePath(pathname, link.href))?.href ?? null;
+
   const indicatedHref = hoveredHref ?? activeHref;
+
+  // Sticky navbar scroll effect
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 12);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  // Better Auth logout
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      const { error } = await authClient.signOut();
+
+      if (error) {
+        console.error("Logout failed:", error.message);
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Account menu links
+  const renderAccountLinks = (mobile = false) =>
+    accountLinks.map((item) => {
+      const active = isActivePath(pathname, item.href);
+
+      if (mobile) {
+        return (
+          <SheetClose asChild key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "rounded-xl px-3 py-3 text-base font-medium transition-colors",
+                active
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+              )}
+            >
+              {item.label}
+            </Link>
+          </SheetClose>
+        );
+      }
+
+      return (
+        <DropdownMenuItem
+          key={item.href}
+          render={<Link href={item.href} />}
+          className={cn("rounded-lg px-2 py-1.5", active && "bg-secondary")}
+        >
+          {item.label}
+        </DropdownMenuItem>
+      );
+    });
 
   return (
     <MotionConfig reducedMotion="user">
@@ -103,10 +182,12 @@ export default function Navbar({
             <span className="rounded-xl bg-primary p-2 text-primary-foreground shadow-sm">
               <Aperture className="h-5 w-5 transition-transform duration-300 ease-out group-hover:rotate-45" />
             </span>
+
             <span className="flex flex-col leading-none">
               <span className="font-heading text-lg font-bold tracking-tight text-foreground">
                 StudioSpace
               </span>
+
               <span className="hidden text-[10px] font-medium tracking-[0.15em] text-muted-foreground uppercase sm:block">
                 Creative Marketplace
               </span>
@@ -146,6 +227,7 @@ export default function Navbar({
                       className="absolute inset-0 rounded-full bg-secondary"
                     />
                   )}
+
                   <span className="relative z-10">{link.label}</span>
                 </Link>
               );
@@ -156,70 +238,92 @@ export default function Navbar({
           <div className="hidden items-center gap-1.5 md:flex">
             <ThemeToggle />
 
-            {!isAuthenticated ? (
+            {isPending ? (
+              <div className="h-9 w-24 animate-pulse rounded-full bg-secondary" />
+            ) : !isAuthenticated ? (
               <>
                 <Button
                   variant="ghost"
                   size="lg"
                   className="rounded-full px-4 text-muted-foreground hover:text-foreground"
+                  render={<Link href="/login" />}
                 >
                   Login
                 </Button>
+
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.2, ease: EASE_OUT }}
                 >
-                  <Button size="lg" className="rounded-full px-5 shadow-sm">
+                  <Button
+                    size="lg"
+                    className="rounded-full px-5 shadow-sm"
+                    render={<Link href="/register" />}
+                  >
                     Register
                   </Button>
                 </motion.div>
               </>
             ) : (
+              /* Authenticated user dropdown */
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <button
                       type="button"
+                      aria-label="Open account menu"
                       className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     />
                   }
                 >
                   <Avatar className="h-8 w-8 border border-border ring-2 ring-primary/15">
                     <AvatarImage src={userImage} alt={userName} />
+
                     <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
-                      {userName[0]?.toUpperCase()}
+                      {userName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium">{userName}</span>
+
+                  <span className="max-w-28 truncate text-sm font-medium">
+                    {userName}
+                  </span>
+
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent
                   align="end"
                   sideOffset={10}
                   className="w-56 rounded-2xl p-1.5 shadow-xl"
                 >
-                  <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
-                    {userName}
-                  </DropdownMenuLabel>
+                  {/* User name */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
+                      {userName}
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+
                   <DropdownMenuSeparator />
-                  {accountLinks.map((item) => (
+
+                  {/* Account navigation */}
+                  <DropdownMenuGroup>{renderAccountLinks()}</DropdownMenuGroup>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Logout */}
+                  <DropdownMenuGroup>
                     <DropdownMenuItem
-                      key={item.href}
-                      render={<Link href={item.href} />}
-                      className="rounded-lg px-2 py-1.5"
+                      variant="destructive"
+                      disabled={isLoggingOut}
+                      onClick={handleLogout}
+                      className="cursor-pointer rounded-lg px-2 py-1.5"
                     >
-                      {item.label}
+                      <LogOut className="mr-2 h-4 w-4" />
+
+                      {isLoggingOut ? "Logging out..." : "Logout"}
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    render={<Link href="/logout" />}
-                    className="rounded-lg px-2 py-1.5"
-                  >
-                    Logout
-                  </DropdownMenuItem>
+                  </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -239,11 +343,16 @@ export default function Navbar({
                   <Menu className="h-5 w-5 text-foreground" />
                 </button>
               </SheetTrigger>
+
               <SheetContent
                 side="right"
-                className="border-l border-border/60 bg-background! sm:bg-background!"
+                className="border-l border-border/60 bg-background"
               >
-                <nav aria-label="Mobile" className="flex flex-col gap-1 pt-2">
+                {/* Mobile main navigation */}
+                <nav
+                  aria-label="Mobile primary navigation"
+                  className="flex flex-col gap-1 pt-2"
+                >
                   {links.map((link) => {
                     const active = isActivePath(pathname, link.href);
 
@@ -266,33 +375,76 @@ export default function Navbar({
                   })}
                 </nav>
 
-                <div className="mt-8 flex flex-col gap-3">
-                  {!isAuthenticated ? (
-                    <>
+                <div className="my-5 border-t border-border" />
+
+                {/* Mobile authentication */}
+                {isPending ? (
+                  <div className="h-10 animate-pulse rounded-xl bg-secondary" />
+                ) : !isAuthenticated ? (
+                  <div className="flex flex-col gap-3">
+                    <SheetClose asChild>
                       <Button
                         variant="outline"
-                        className="h-11 w-full rounded-full shadow-sm"
+                        className="h-11 w-full rounded-full"
+                        render={<Link href="/login" />}
                       >
                         Login
                       </Button>
-                      <Button className="h-11 w-full rounded-full shadow-sm">
+                    </SheetClose>
+
+                    <SheetClose asChild>
+                      <Button
+                        className="h-11 w-full rounded-full"
+                        render={<Link href="/register" />}
+                      >
                         Register
                       </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="h-11 w-full rounded-full shadow-sm"
-                      >
-                        Dashboard
-                      </Button>
-                      <Button className="h-11 w-full rounded-full shadow-sm">
-                        Add New Studio
-                      </Button>
-                    </>
-                  )}
-                </div>
+                    </SheetClose>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {/* Mobile user profile */}
+                    <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
+                      <Avatar className="h-10 w-10 border border-border">
+                        <AvatarImage src={userImage} alt={userName} />
+
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {userName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {userName}
+                        </p>
+
+                        <p className="text-xs text-muted-foreground">
+                          Signed in
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mobile account navigation */}
+                    <nav
+                      aria-label="Mobile account navigation"
+                      className="flex flex-col gap-1"
+                    >
+                      {renderAccountLinks(true)}
+                    </nav>
+
+                    {/* Mobile logout */}
+                    <Button
+                      variant="destructive"
+                      disabled={isLoggingOut}
+                      onClick={handleLogout}
+                      className="mt-2 h-11 w-full rounded-full"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+
+                      {isLoggingOut ? "Logging out..." : "Logout"}
+                    </Button>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
           </div>

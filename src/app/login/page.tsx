@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
   ArrowRight,
@@ -13,42 +14,69 @@ import {
   Lock,
 } from "lucide-react";
 
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage("");
-
-    const formData = new FormData(e.currentTarget);
-
-    const email = formData.get("email");
-    const password = formData.get("password");
-
     setIsLoading(true);
 
-    try {
-      // Better Auth login integration will go here.
-      console.log({ email, password });
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
 
-      setMessage(
-        "Login UI is ready. Better Auth integration is required to sign in.",
-      );
+    try {
+      const { error } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/",
+      });
+
+      if (error) {
+        setMessage(error.message || "Invalid email or password.");
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
     } catch {
-      setMessage("Something went wrong. Please try again.");
+      setMessage(
+        "Unable to sign in. Please check your connection and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    setMessage("Google authentication will be connected with Better Auth.");
+  const handleGoogleLogin = async () => {
+    setMessage("");
+    setIsGoogleLoading(true);
+
+    try {
+      const { error } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      });
+
+      if (error) {
+        setMessage(error.message || "Google sign-in failed.");
+        setIsGoogleLoading(false);
+      }
+    } catch {
+      setMessage("Unable to connect to Google authentication.");
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -139,8 +167,10 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
+
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
                   <Input
                     id="email"
                     name="email"
@@ -148,18 +178,14 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     required
+                    disabled={isLoading}
                     className="h-12 rounded-xl bg-background pl-11"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <span className="text-xs text-muted-foreground">
-                    Forgot password?
-                  </span>
-                </div>
+                <Label htmlFor="password">Password</Label>
 
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -171,12 +197,13 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     required
+                    disabled={isLoading}
                     className="h-12 rounded-xl bg-background pl-11 pr-12"
                   />
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((prev) => !prev)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
@@ -194,7 +221,8 @@ export default function LoginPage() {
               {message && (
                 <p
                   role="alert"
-                  className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary"
+                  aria-live="polite"
+                  className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
                 >
                   {message}
                 </p>
@@ -202,7 +230,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
                 className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/20"
               >
                 {isLoading ? "Signing in..." : "Login"}
@@ -221,6 +249,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
+              disabled={isLoading || isGoogleLoading}
               onClick={handleGoogleLogin}
               className="h-12 w-full rounded-xl"
             >
@@ -246,7 +275,10 @@ export default function LoginPage() {
                   d="M24 48c6.47 0 11.91-2.13 15.89-5.81l-7.72-5.99c-2.14 1.44-4.88 2.3-8.17 2.3-6.53 0-12.06-4.22-14.04-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"
                 />
               </svg>
-              Continue with Google
+
+              {isGoogleLoading
+                ? "Connecting to Google..."
+                : "Continue with Google"}
             </Button>
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
