@@ -125,7 +125,7 @@ export default function Hero() {
                 </Link>
 
                 <Link
-                  href="/studios/new"
+                  href="/add-studio"
                   className="inline-flex h-12 items-center justify-center rounded-full border border-input bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   Host Your Space
