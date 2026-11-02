@@ -8,31 +8,31 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Context
-- Next.js 16.4.3 (breaking from standard docs). App Router at `src/app/`.
-- `npm run dev` / `build` / `lint` (`eslint` only — no test script).
-- Before writing code: read `node_modules/next/dist/docs/` for this version.
+## What this is
+- Next.js 16.4.3 App Router + React 19.3 frontend for a studio-rental marketplace. Single package, no tests, no CI.
+- Routes: `/`, `/add-studio`, `/login`, `/register`, `/my-listings`. The navbar also links `/studios`, `/dashboard`, `/my-bookings` — those pages do not exist yet (404).
+- `src/components/ui/` is 63 generated shadcn/ui files; hand-written UI lives in `src/components/` and `src/app/`.
+
+## Backend is external — not in this repo
+- Auth and data come from a separate API at `NEXT_PUBLIC_API_URL` (default `http://localhost:7000`). There are **no** `src/app/api` route handlers and no middleware here.
+- Only the `better-auth` client is present (`src/lib/auth-client.ts`); pages use `authClient.useSession()`, `signIn.email`, `signUp.email`, `signOut`, `signIn.social({ provider: "google" })`.
+- `mongodb`, `@better-auth/mongo-adapter`, and the `MONGODB_URI` / `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` keys in `.env` / `.env.local` belong to that backend. `src/lib/api/README.md` is an empty placeholder — don't add DB code here unless asked.
+- Studio CRUD contract: `POST ${API_URL}/api/studios`, `GET /api/my-listings`, `DELETE /api/studios/:id`, all with `credentials: "include"`. `src/app/my-listings/page.tsx` hardcodes `http://localhost:7000` instead of reading the env var.
 
 ## Commands
-- `npm run dev` — dev server (uses turbopack + react compiler per `next.config.ts`).
-- `npm run build` — production build.
-- `npm run lint` — flat-config ESLint (`eslint.config.mjs`). No `lint:fix` script; fix manually.
-- No tests defined in `package.json`; don't invent `npm test`.
+- `npm run dev` — turbopack + React Compiler (`next.config.ts` also enables `cacheComponents` and `partialPrefetching`).
+- `npm run build` — typecheck + static prerender; currently passes. Use this as the verification gate.
+- `npm run lint` — bare `eslint`; passes with 5 pre-existing `<img>` warnings. `src/components/ui/**` is exempted from `no-explicit-any` and `react-hooks/set-state-in-effect` in `eslint.config.mjs` so generated primitives stay untouched.
+- No test runner or `test` script — don't invent `npm test`.
 
-## Config quirks (verify before assuming defaults)
-- `next.config.ts`: `turbopack` with `@tailwindcss/turbopack` loader, `reactCompiler: true`, `cacheComponents: true`, `partialPrefetching: true`.
-- `tsconfig.json`: `paths` `{"@/*":"./src/*"}`; `jsx: "react-jsx"`; `moduleResolution: "bundler"`.
-- `eslint.config.mjs`: flat config (`defineConfig`, `globalIgnores`). Ignores `.next/**`, `out/**`, `build/**`, `next-env.d.ts`.
-- `.gitignore`: `/node_modules`, `/.next/`, `/out/`, `/build`, `.env*`.
+## UI conventions (differ from stock shadcn)
+- `components.json` style is `base-nova`: components wrap `@base-ui/react`, so compose with the `render` prop, not Radix `asChild` — e.g. `<Button nativeButton={false} render={<Link href="/login" />}>`. Exception: `src/components/ui/sheet.tsx` still uses `@radix-ui/react-dialog` and does accept `asChild`.
+- `cn` comes from the `cn` package (shadcn's clsx + tailwind-merge replacement); `src/lib/utils.ts` only re-exports it.
+- Tailwind v4 CSS-first: no `tailwind.config`. Design tokens and `.dark` overrides live in `src/app/globals.css` (`@theme inline`, `@custom-variant dark`). Palette: indigo `#6366F1` primary, pink accent, ivory `#F6F4F0` / ink `#12111A`.
+- Dark mode is hand-rolled: a blocking inline script in `src/app/layout.tsx` applies the saved/system theme to `<html>` before paint, and `ThemeToggle` stays stateless (CSS `dark:` variants pick the icon). No `next-themes`.
+- Fonts via `next/font/google` (Inter + Playfair Display) exposed as `--font-sans` / `--font-heading`; use `font-heading` for headings.
+- `Navbar` is rendered once in `src/app/layout.tsx`, not per page.
+- Images are raw `<img>` with remote Unsplash URLs; `next.config.ts` has no `images.remotePatterns`, so moving to `next/image` requires config first.
 
-## AGENTS.md rule
-- `next dev` auto-inserts the block above. Don't delete it from diffs — it recreates uncommitted. Commit it together with your changes so the tree stays clean.
-
-## Current repo state (verified)
-- shadcn/ui initialized (`components.json`; `src/components/ui/` includes `button`, `card`, `badge`, `avatar`, `dropdown-menu`, `sheet`, `input`); `cn` package (not clsx+tailwind-merge directly) provides `src/lib/utils.ts`.
-- Theme: `ThemeToggle` component toggles `.dark` class; palette is indigo (`#6366F1`) primary + pink (`#F472B6`) accent on warm ivory (`#F6F4F0`) / dark ink (`#12111A`). Fonts: Inter (body) + Playfair Display (headings) via `next/font/google`.
-- Mobile nav: shadcn `Sheet` (`src/components/ui/sheet.tsx`) slide-out from right; desktop nav unchanged.
-- Page entry: `src/app/page.tsx` currently navbar-only (other sections rebuilt earlier but some lost — recreate from `opencode/plan/` build scripts if needed). `src/lib/api/README.md` reserved for MongoDB/API.
-- Images: Unsplash URLs direct; `next/image` not used (lint warning). `swiper` installed for hero slider.
-- Commands: `npm run dev` / `build` / `lint`. No test suite.
-- Build: passes TypeScript + static prerender (`/`) verified as of latest run.
+## Keep the block above
+- `next dev` regenerates the top block (see `node_modules/next/dist/server/lib/generate-agent-files.js`); commit it with your changes so the tree stays clean.

@@ -55,7 +55,7 @@ const highlights = [
 export default function AboutUs() {
   return (
     <section
-      id="about-us"
+      id="about"
       aria-labelledby="about-us-heading"
       className="scroll-mt-28 px-4 py-20 sm:px-6 lg:px-8 lg:py-28"
     >

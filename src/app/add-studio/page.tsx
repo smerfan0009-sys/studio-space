@@ -1,9 +1,9 @@
 "use client";
 
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,6 +26,9 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
+import { authClient } from "@/lib/auth-client";
+import { toast } from "@/lib/toast";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,6 +40,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
 
 const categories = [
   "Photo Studio",
@@ -59,6 +64,13 @@ const amenityOptions = [
 ];
 
 export default function AddStudioPage() {
+  const router = useRouter();
+
+  // Authentication session
+  const { data: session, isPending } = authClient.useSession();
+  const user = session?.user;
+
+  // Form states
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
@@ -68,7 +80,16 @@ export default function AddStudioPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [overview, setOverview] = useState("");
   const [amenities, setAmenities] = useState<string[]>([]);
-  const [notice, setNotice] = useState("");
+
+  // UI states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect unauthenticated users
+  useEffect(() => {
+    if (!isPending && !user) {
+      router.replace("/login");
+    }
+  }, [isPending, user, router]);
 
   const toggleAmenity = (amenity: string) => {
     setAmenities((current) =>
@@ -78,30 +99,33 @@ export default function AddStudioPage() {
     );
   };
 
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!user) {
+      toast.warning("Please log in before publishing a studio.");
+      router.replace("/login");
+      return;
+    }
+
     setIsSubmitting(true);
-    setNotice("");
 
     const studioData = {
-      title,
+      title: title.trim(),
       category,
-      hourlyRate,
-      securityDeposit,
-      capacity,
-      location,
-      imageUrl,
+      hourlyRate: Number(hourlyRate),
+      securityDeposit: Number(securityDeposit),
+      capacity: Number(capacity),
+      location: location.trim(),
+      imageUrl: imageUrl.trim(),
       amenities,
-      overview,
+      overview: overview.trim(),
     };
 
     try {
-      const response = await fetch("http://localhost:7000/api/studios", {
+      const response = await fetch(`${API_URL}/api/studios`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -111,20 +135,40 @@ export default function AddStudioPage() {
       const result = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Your session has expired. Please log in again.");
+        }
+
         throw new Error(result.message || "Failed to create studio.");
       }
 
-      setNotice("Studio created successfully!");
-
+      toast.success("Studio created successfully!");
       router.push("/my-listings");
+      router.refresh();
     } catch (error) {
-      setNotice(
-        error instanceof Error ? error.message : "Something went wrong.",
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Wait until authentication status is checked
+  if (isPending || !user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">
+            Checking your account...
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background pb-20 text-foreground">
@@ -163,6 +207,7 @@ export default function AddStudioPage() {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Aperture className="h-6 w-6" />
               </div>
+
               <div>
                 <p className="font-heading text-lg font-bold">StudioSpace</p>
                 <p className="text-xs text-muted-foreground">
@@ -185,6 +230,7 @@ export default function AddStudioPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Camera className="h-5 w-5" />
                   </div>
+
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Information
@@ -294,6 +340,7 @@ export default function AddStudioPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <MapPin className="h-5 w-5" />
                   </div>
+
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Location
@@ -327,6 +374,7 @@ export default function AddStudioPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <ImagePlus className="h-5 w-5" />
                   </div>
+
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Cover Image
@@ -387,6 +435,7 @@ export default function AddStudioPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Sparkles className="h-5 w-5" />
                   </div>
+
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Amenities
@@ -482,6 +531,7 @@ export default function AddStudioPage() {
                       Your account information will be attached to this listing.
                     </CardDescription>
                   </div>
+
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                     <LockKeyhole className="h-5 w-5" />
                   </div>
@@ -493,7 +543,8 @@ export default function AddStudioPage() {
                   <Label htmlFor="hostName">Host Name</Label>
                   <Input
                     id="hostName"
-                    value="Will be connected after login"
+                    value={user.name || ""}
+                    placeholder="Your account name"
                     readOnly
                     className="h-12 rounded-xl bg-muted/50 text-muted-foreground"
                   />
@@ -503,7 +554,9 @@ export default function AddStudioPage() {
                   <Label htmlFor="hostEmail">Host Email</Label>
                   <Input
                     id="hostEmail"
-                    value="Will be connected after login"
+                    type="email"
+                    value={user.email || ""}
+                    placeholder="Your account email"
                     readOnly
                     className="h-12 rounded-xl bg-muted/50 text-muted-foreground"
                   />
@@ -511,25 +564,15 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Form Notice */}
-            {notice && (
-              <div
-                role="status"
-                className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground"
-              >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                <p>{notice}</p>
-              </div>
-            )}
-
             {/* Actions */}
             <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between">
               <Button
                 type="button"
                 variant="outline"
                 className="h-12 rounded-full px-7"
+                onClick={() => router.push("/")}
               >
-                <Link href="/">Cancel</Link>
+                Cancel
               </Button>
 
               <Button

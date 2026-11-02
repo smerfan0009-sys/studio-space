@@ -1,30 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    if (savedTheme) return savedTheme;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
+const STORAGE_KEY = "theme";
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+/**
+ * Applies the theme to <html>. Kept outside React state on purpose: the icon is
+ * driven by CSS `dark:` variants, so there is nothing to hydrate and no
+ * server/client mismatch.
+ */
+function applyTheme(theme: "light" | "dark") {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  localStorage.setItem(STORAGE_KEY, theme);
+}
+
+export function ThemeToggle() {
+  // The inline script in layout.tsx sets `.dark` before paint. React's dev-mode
+  // Strict Mode remount can clear attributes it manages on <html>, so re-apply
+  // the stored theme here. No-op in production.
+  useLayoutEffect(() => {
+    const savedTheme = localStorage.getItem(STORAGE_KEY);
+
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
     }
-  }, [theme]);
+  }, []);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    const isDark = document.documentElement.classList.contains("dark");
+    applyTheme(isDark ? "light" : "dark");
   };
 
   return (
@@ -35,11 +43,8 @@ export function ThemeToggle() {
       className="rounded-full text-foreground/80 hover:text-foreground hover:bg-secondary transition-colors"
       aria-label="Toggle Theme"
     >
-      {theme === "light" ? (
-        <Moon className="h-5 w-5 transition-all" />
-      ) : (
-        <Sun className="h-5 w-5 transition-all text-amber-400" />
-      )}
+      <Moon className="h-5 w-5 transition-all dark:hidden" />
+      <Sun className="hidden h-5 w-5 transition-all text-amber-400 dark:block" />
     </Button>
   );
 }

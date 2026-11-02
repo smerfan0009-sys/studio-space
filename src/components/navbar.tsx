@@ -8,7 +8,7 @@ import { Aperture, ChevronDown, Menu, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -110,13 +110,16 @@ export default function Navbar() {
       const { error } = await authClient.signOut();
 
       if (error) {
+        toast.error("Logout failed. Please try again.");
         console.error("Logout failed:", error.message);
         return;
       }
 
+      toast.success("You have been logged out successfully.");
       router.replace("/");
       router.refresh();
     } catch (error) {
+      toast.error("Logout failed. Please try again.");
       console.error("Logout failed:", error);
     } finally {
       setIsLoggingOut(false);
@@ -242,7 +245,9 @@ export default function Navbar() {
               <div className="h-9 w-24 animate-pulse rounded-full bg-secondary" />
             ) : !isAuthenticated ? (
               <>
+                {/* Desktop Login */}
                 <Button
+                  nativeButton={false}
                   variant="ghost"
                   size="lg"
                   className="rounded-full px-4 text-muted-foreground hover:text-foreground"
@@ -251,12 +256,14 @@ export default function Navbar() {
                   Login
                 </Button>
 
+                {/* Desktop Register */}
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.2, ease: EASE_OUT }}
                 >
                   <Button
+                    nativeButton={false}
                     size="lg"
                     className="rounded-full px-5 shadow-sm"
                     render={<Link href="/register" />}
@@ -297,7 +304,6 @@ export default function Navbar() {
                   sideOffset={10}
                   className="w-56 rounded-2xl p-1.5 shadow-xl"
                 >
-                  {/* User name */}
                   <DropdownMenuGroup>
                     <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
                       {userName}
@@ -306,12 +312,10 @@ export default function Navbar() {
 
                   <DropdownMenuSeparator />
 
-                  {/* Account navigation */}
                   <DropdownMenuGroup>{renderAccountLinks()}</DropdownMenuGroup>
 
                   <DropdownMenuSeparator />
 
-                  {/* Logout */}
                   <DropdownMenuGroup>
                     <DropdownMenuItem
                       variant="destructive"
@@ -320,7 +324,6 @@ export default function Navbar() {
                       className="cursor-pointer rounded-lg px-2 py-1.5"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-
                       {isLoggingOut ? "Logging out..." : "Logout"}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -382,8 +385,10 @@ export default function Navbar() {
                   <div className="h-10 animate-pulse rounded-xl bg-secondary" />
                 ) : !isAuthenticated ? (
                   <div className="flex flex-col gap-3">
+                    {/* Mobile Login */}
                     <SheetClose asChild>
                       <Button
+                        nativeButton={false}
                         variant="outline"
                         className="h-11 w-full rounded-full"
                         render={<Link href="/login" />}
@@ -392,8 +397,10 @@ export default function Navbar() {
                       </Button>
                     </SheetClose>
 
+                    {/* Mobile Register */}
                     <SheetClose asChild>
                       <Button
+                        nativeButton={false}
                         className="h-11 w-full rounded-full"
                         render={<Link href="/register" />}
                       >
@@ -440,7 +447,6 @@ export default function Navbar() {
                       className="mt-2 h-11 w-full rounded-full"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-
                       {isLoggingOut ? "Logging out..." : "Logout"}
                     </Button>
                   </div>

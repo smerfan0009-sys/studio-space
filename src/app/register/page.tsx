@@ -22,14 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { toast } from "@/lib/toast";
 
 export default function RegisterPage() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
@@ -43,10 +43,9 @@ export default function RegisterPage() {
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
-    setMessage("");
 
     if (!isPasswordValid) {
-      setMessage("Please fulfill all password requirements.");
+      toast.warning("Please fulfill all password requirements.");
       return;
     }
 
@@ -61,7 +60,7 @@ export default function RegisterPage() {
     ).trim();
 
     if (!name || !email) {
-      setMessage("Please enter your name and email.");
+      toast.warning("Please enter your name and email.");
       return;
     }
 
@@ -77,21 +76,19 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        setMessage(
-          error.message || "Registration failed. Please try again."
-        );
+        toast.error(error.message || "Registration failed. Please try again.");
         return;
       }
 
       if (data) {
-        setMessage("Account created successfully!");
+        toast.success("Account created successfully! Please log in.");
 
-        router.push("/");
+        router.push("/login");
         router.refresh();
       }
     } catch (error) {
       console.error("Registration error:", error);
-      setMessage("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +96,6 @@ export default function RegisterPage() {
 
   // Google registration
   const handleGoogleRegister = async () => {
-    setMessage("");
     setIsLoading(true);
 
     try {
@@ -109,14 +105,12 @@ export default function RegisterPage() {
       });
 
       if (error) {
-        setMessage(
-          error.message || "Google sign-up failed. Please try again."
-        );
+        toast.error(error.message || "Google sign-up failed. Please try again.");
         setIsLoading(false);
       }
     } catch (error) {
       console.error("Google registration error:", error);
-      setMessage("Google sign-up failed. Please try again.");
+      toast.error("Google sign-up failed. Please try again.");
       setIsLoading(false);
     }
   };
@@ -365,16 +359,6 @@ export default function RegisterPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Error / success message */}
-              {message && (
-                <p
-                  role="alert"
-                  className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary"
-                >
-                  {message}
-                </p>
-              )}
 
               {/* Register button */}
               <Button

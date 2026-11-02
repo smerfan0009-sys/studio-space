@@ -6,7 +6,6 @@ import {
   Aperture,
   ArrowRight,
   Camera,
-  CheckCircle2,
   DollarSign,
   Edit3,
   LoaderCircle,
@@ -22,6 +21,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "@/lib/toast";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
 
 interface Studio {
   _id: string;
@@ -44,8 +46,6 @@ export default function MyListingsPage() {
   const [search, setSearch] = useState("");
   const [selectedStudio, setSelectedStudio] = useState<Studio | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [noticeType, setNoticeType] = useState<"success" | "error">("success");
 
   // Fetch user's studios when the page mounts
   useEffect(() => {
@@ -54,9 +54,8 @@ export default function MyListingsPage() {
     const loadStudios = async () => {
       try {
         setLoading(true);
-        setNotice("");
 
-        const response = await fetch("http://localhost:7000/api/my-listings", {
+        const response = await fetch(`${API_URL}/api/my-listings`, {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -78,23 +77,16 @@ export default function MyListingsPage() {
           );
         }
 
-        if (!response.ok) {
-          throw new Error(
-            result.message || "Could not load your studio listings.",
-          );
-        }
-
         if (!ignore) {
           setStudios(result.studios || []);
         }
       } catch (error) {
         if (!ignore) {
-          setNotice(
+          toast.error(
             error instanceof Error
               ? error.message
               : "Something went wrong while loading listings.",
           );
-          setNoticeType("error");
         }
       } finally {
         if (!ignore) {
@@ -116,20 +108,23 @@ export default function MyListingsPage() {
 
     try {
       setDeleting(true);
-      setNotice("");
 
       const response = await fetch(
-        `http://localhost:7000/api/studios/${selectedStudio._id}`,
+        `${API_URL}/api/studios/${selectedStudio._id}`,
         {
           method: "DELETE",
           credentials: "include",
         },
       );
 
-      const result = await response.json();
+      // A 204/empty response has no JSON body, so don't parse it.
+      const contentType = response.headers.get("content-type");
+      const result = contentType?.includes("application/json")
+        ? await response.json()
+        : null;
 
       if (!response.ok) {
-        throw new Error(result.message || "Could not delete this studio.");
+        throw new Error(result?.message || "Could not delete this studio.");
       }
 
       setStudios((current) =>
@@ -137,15 +132,13 @@ export default function MyListingsPage() {
       );
 
       setSelectedStudio(null);
-      setNotice("Studio listing deleted successfully!");
-      setNoticeType("success");
+      toast.success("Studio listing deleted successfully!");
     } catch (error) {
-      setNotice(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Something went wrong while deleting.",
       );
-      setNoticeType("error");
     } finally {
       setDeleting(false);
     }
@@ -265,36 +258,6 @@ export default function MyListingsPage() {
               />
             </div>
           </div>
-
-          {notice && (
-            <div
-              role="status"
-              className={`mb-6 flex items-start gap-3 rounded-2xl border p-4 text-sm ${
-                noticeType === "success"
-                  ? "border-green-500/20 bg-green-500/5"
-                  : "border-destructive/20 bg-destructive/5"
-              }`}
-            >
-              <CheckCircle2
-                className={`h-5 w-5 shrink-0 ${
-                  noticeType === "success"
-                    ? "text-green-600"
-                    : "text-destructive"
-                }`}
-              />
-
-              <p>{notice}</p>
-
-              <button
-                type="button"
-                onClick={() => setNotice("")}
-                className="ml-auto"
-                aria-label="Dismiss message"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
 
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

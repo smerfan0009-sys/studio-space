@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,13 +24,11 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessage("");
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -44,23 +43,21 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setMessage(error.message || "Invalid email or password.");
+        toast.error(error.message || "Invalid email or password.");
         return;
       }
 
       router.replace("/");
+      toast.success("Welcome back to StudioSpace!");
       router.refresh();
     } catch {
-      setMessage(
-        "Unable to sign in. Please check your connection and try again.",
-      );
+      toast.error("Unable to sign in. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setMessage("");
     setIsGoogleLoading(true);
 
     try {
@@ -70,11 +67,11 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setMessage(error.message || "Google sign-in failed.");
+        toast.error(error.message || "Google sign-in failed.");
         setIsGoogleLoading(false);
       }
     } catch {
-      setMessage("Unable to connect to Google authentication.");
+      toast.error("Unable to connect to Google authentication.");
       setIsGoogleLoading(false);
     }
   };
@@ -217,16 +214,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-
-              {message && (
-                <p
-                  role="alert"
-                  aria-live="polite"
-                  className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
-                >
-                  {message}
-                </p>
-              )}
 
               <Button
                 type="submit"
