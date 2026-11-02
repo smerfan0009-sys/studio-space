@@ -81,8 +81,8 @@
   --sidebar-ring: #6366f1;
   --background: #f6f4f0;
   --foreground: #1a1a2e;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Playfair Display', ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Playfair Display", ui-serif, Georgia, serif;
 }
 
 .dark {
@@ -129,4 +129,10 @@
   html {
     @apply font-sans;
   }
+}
+
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 7rem;
 }
