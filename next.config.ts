@@ -1,10 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://studio-space-server-weld.vercel.app/api/:path*",
+      },
+    ];
+  },
+
   turbopack: {
     rules: {
       "*.css": {

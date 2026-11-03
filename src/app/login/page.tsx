@@ -89,12 +89,16 @@ export default function LoginPage() {
 
     setIsGoogleLoading(true);
 
-    const callbackURL = getSafeCallbackURL();
+    // safe path নিশ্চিত করে ফ্রন্টএন্ডের ফুল URL তৈরি করা
+    const safePath = getSafeCallbackURL();
+    const fullCallbackURL = safePath.startsWith("http")
+      ? safePath
+      : `${window.location.origin}${safePath.startsWith("/") ? safePath : `/${safePath}`}`;
 
     try {
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}${callbackURL}`,
+        callbackURL: fullCallbackURL,
       });
 
       if (error) {
