@@ -24,7 +24,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -51,31 +51,32 @@ export default function LoginPage() {
       toast.success("Welcome back to StudioSpace!");
       router.refresh();
     } catch {
-      toast.error("Unable to sign in. Please check your connection and try again.");
+      toast.error(
+        "Unable to sign in. Please check your connection and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
 
     try {
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/`,
       });
 
       if (error) {
         toast.error(error.message || "Google sign-in failed.");
         setIsGoogleLoading(false);
       }
-    } catch {
+    } catch (error) {
+      console.error("Google login error:", error);
       toast.error("Unable to connect to Google authentication.");
       setIsGoogleLoading(false);
     }
   };
-
   return (
     <main className="min-h-screen bg-background px-4 py-10 md:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-xl lg:grid-cols-2">

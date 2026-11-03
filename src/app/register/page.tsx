@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -29,19 +28,16 @@ export default function RegisterPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasMinLength = password.length >= 6;
 
-  const isPasswordValid =
-    hasUppercase && hasLowercase && hasMinLength;
+  const isPasswordValid = hasUppercase && hasLowercase && hasMinLength;
 
   // Email and password registration
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!isPasswordValid) {
@@ -55,9 +51,7 @@ export default function RegisterPage() {
     const email = String(formData.get("email") || "")
       .trim()
       .toLowerCase();
-    const photoURL = String(
-      formData.get("photoURL") || ""
-    ).trim();
+    const photoURL = String(formData.get("photoURL") || "").trim();
 
     if (!name || !email) {
       toast.warning("Please enter your name and email.");
@@ -101,11 +95,11 @@ export default function RegisterPage() {
     try {
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/`,
       });
 
       if (error) {
-        toast.error(error.message || "Google sign-up failed. Please try again.");
+        toast.error(error.message || "Google sign-up failed.");
         setIsLoading(false);
       }
     } catch (error) {
@@ -118,7 +112,6 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 md:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-xl lg:grid-cols-2">
-
         {/* Left visual section */}
         <div className="relative hidden overflow-hidden bg-[#17152b] p-12 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-primary/40 blur-[100px]" />
@@ -128,9 +121,7 @@ export default function RegisterPage() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
               <Camera className="h-6 w-6 text-pink-300" />
             </div>
-            <span className="font-heading text-2xl font-bold">
-              StudioSpace
-            </span>
+            <span className="font-heading text-2xl font-bold">StudioSpace</span>
           </div>
 
           <motion.div
@@ -146,14 +137,12 @@ export default function RegisterPage() {
 
             <h1 className="font-heading text-5xl font-bold leading-tight">
               Make space for
-              <span className="block text-pink-300">
-                creativity.
-              </span>
+              <span className="block text-pink-300">creativity.</span>
             </h1>
 
             <p className="mt-6 text-base leading-8 text-white/65">
-              Discover inspiring studios, connect with creative people,
-              and turn your next big idea into reality.
+              Discover inspiring studios, connect with creative people, and turn
+              your next big idea into reality.
             </p>
 
             <div className="mt-10 space-y-5">
@@ -164,9 +153,7 @@ export default function RegisterPage() {
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-pink-300" />
-                  <span className="text-sm text-white/80">
-                    {item}
-                  </span>
+                  <span className="text-sm text-white/80">{item}</span>
                 </div>
               ))}
             </div>
@@ -212,7 +199,6 @@ export default function RegisterPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-
               {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
@@ -252,9 +238,7 @@ export default function RegisterPage() {
 
               {/* Profile photo URL */}
               <div className="space-y-2">
-                <Label htmlFor="photoURL">
-                  Profile photo URL (optional)
-                </Label>
+                <Label htmlFor="photoURL">Profile photo URL (optional)</Label>
 
                 <div className="relative">
                   <ImageIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -416,7 +400,6 @@ export default function RegisterPage() {
                   d="M24 48c6.47 0 11.91-2.13 15.89-5.81l-7.72-5.99c-2.14 1.44-4.88 2.3-8.17 2.3-6.53 0-12.06-4.22-14.04-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"
                 />
               </svg>
-
               Continue with Google
             </Button>
 

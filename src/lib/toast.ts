@@ -1,15 +1,12 @@
 import { toast as sonner, type ExternalToast } from "sonner";
 
-const DEFAULT_DURATION = 4000;
+const DEFAULT_DURATION = 5000;
 
 function withDefaults(options?: ExternalToast): ExternalToast {
   return { duration: DEFAULT_DURATION, ...options };
 }
 
-/**
- * Centralized toast helpers. Call these instead of importing `sonner`
- * directly so duration and styling stay consistent across the app.
- */
+
 export const toast = {
   success: (message: string, options?: ExternalToast) =>
     sonner.success(message, withDefaults(options)),
