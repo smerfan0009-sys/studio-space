@@ -72,7 +72,7 @@ export default function MyListingsPage() {
       try {
         setLoading(true);
 
-        const response = await fetch(`${API_URL}/api/my-listings`, {
+        const response = await fetch("/api/my-listings", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -131,13 +131,10 @@ export default function MyListingsPage() {
     try {
       setDeleting(true);
 
-      const response = await fetch(
-        `${API_URL}/api/studios/${selectedStudio._id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`/api/studios/${selectedStudio._id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
       const contentType = response.headers.get("content-type");
       const result = contentType?.includes("application/json")

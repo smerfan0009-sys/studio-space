@@ -78,7 +78,7 @@ function StudiosContent() {
 
   // Fetch studios and return data without updating React state.
   const fetchStudios = useCallback(async (signal?: AbortSignal) => {
-    const response = await fetch(`${API_URL}/api/studios`, {
+    const response = await fetch("/api/studios", {
       method: "GET",
       credentials: "include",
       cache: "no-store",

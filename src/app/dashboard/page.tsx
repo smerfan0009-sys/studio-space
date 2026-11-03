@@ -328,17 +328,17 @@ export default function DashboardPage() {
     async function loadDashboard() {
       const [studiosResult, bookingsResult, hostBookingsResult] =
         await Promise.allSettled([
-          fetch(`${API_URL}/api/my-listings`, {
+          fetch("/api/my-listings", {
             credentials: "include",
             cache: "no-store",
             signal: controller.signal,
           }),
-          fetch(`${API_URL}/api/my-bookings`, {
+          fetch("/api/my-bookings", {
             credentials: "include",
             cache: "no-store",
             signal: controller.signal,
           }),
-          fetch(`${API_URL}/api/host-bookings`, {
+          fetch("/api/host-bookings", {
             credentials: "include",
             cache: "no-store",
             signal: controller.signal,
@@ -468,16 +468,13 @@ export default function DashboardPage() {
     try {
       setActionLoading(`${bookingId}-${action}`);
 
-      const response = await fetch(
-        `${API_URL}/api/bookings/${bookingId}/${action}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+      const response = await fetch(`/api/bookings/${bookingId}/${action}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+      });
 
       const result = await response.json();
 

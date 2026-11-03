@@ -109,15 +109,12 @@ function StudioDetailsContent() {
 
     async function fetchStudio() {
       try {
-        const response = await fetch(
-          `${API_URL}/api/studios/${encodeURIComponent(id)}`,
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
+        const response = await fetch(`/api/studios/${encodeURIComponent(id)}`, {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
         const payload = await response.json().catch(() => null);
 
@@ -164,7 +161,7 @@ function StudioDetailsContent() {
 
     return () => controller.abort();
   }, [id, retryCount, isPending, user, router]);
-  
+
   const isLoading = isPending || !result || result.id !== id;
   const studio = result?.id === id ? result.studio : null;
   const error = result?.id === id ? result.error : undefined;
@@ -254,7 +251,7 @@ function StudioDetailsContent() {
     setIsBooking(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const response = await fetch("/api/bookings", {
         method: "POST",
         credentials: "include",
         headers: {

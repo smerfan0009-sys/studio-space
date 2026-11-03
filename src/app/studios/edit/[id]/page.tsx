@@ -155,7 +155,7 @@ function EditStudioContent() {
     async function loadStudio() {
       try {
         const response = await fetch(
-          `${API_URL}/api/studios/${encodeURIComponent(studioId)}`,
+          `/api/studios/${encodeURIComponent(studioId)}`,
           {
             method: "GET",
             credentials: "include",
@@ -286,7 +286,7 @@ function EditStudioContent() {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/studios/${encodeURIComponent(studioId)}`,
+        `/api/studios/${encodeURIComponent(studioId)}`,
         {
           method: "PUT",
           credentials: "include",

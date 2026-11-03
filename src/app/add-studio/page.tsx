@@ -149,7 +149,7 @@ export default function AddStudioPage() {
     const formData = new FormData();
     formData.append("image", selectedFile);
 
-    const response = await fetch(`${API_URL}/api/upload-image`, {
+    const response = await fetch("/api/upload-image", {
       method: "POST",
       credentials: "include",
       body: formData,
@@ -231,7 +231,7 @@ export default function AddStudioPage() {
         overview: overview.trim(),
       };
 
-      const response = await fetch(`${API_URL}/api/studios`, {
+      const response = await fetch("/api/studios", {
         method: "POST",
         credentials: "include",
         headers: {

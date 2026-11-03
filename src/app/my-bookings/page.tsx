@@ -248,7 +248,7 @@ export default function MyBookingsPage() {
 
     async function loadBookings() {
       try {
-        const response = await fetch(`${API_URL}/api/my-bookings`, {
+        const response = await fetch("/api/my-bookings", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -338,7 +338,7 @@ export default function MyBookingsPage() {
 
     try {
       const response = await fetch(
-        `${API_URL}/api/bookings/${selectedBooking._id}/cancel`,
+        `/api/bookings/${selectedBooking._id}/cancel`,
         {
           method: "PATCH",
           credentials: "include",
@@ -400,7 +400,7 @@ export default function MyBookingsPage() {
     setIsSubmittingReview(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/reviews`, {
+      const response = await fetch("/api/reviews", {
         method: "POST",
         credentials: "include",
         headers: {
