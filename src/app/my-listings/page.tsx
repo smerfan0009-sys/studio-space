@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Aperture,
   ArrowRight,
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/lib/toast";
+import { authClient } from "@/lib/auth-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
 
@@ -41,14 +43,29 @@ interface Studio {
 }
 
 export default function MyListingsPage() {
+  const router = useRouter();
+
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+
   const [studios, setStudios] = useState<Studio[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedStudio, setSelectedStudio] = useState<Studio | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch user's studios when the page mounts
+  // Redirect unauthenticated users to login
   useEffect(() => {
+    if (!sessionLoading && !session) {
+      router.replace("/login");
+    }
+  }, [session, sessionLoading, router]);
+
+  // Fetch user's studios only after authentication
+  useEffect(() => {
+    if (sessionLoading || !session) {
+      return;
+    }
+
     let ignore = false;
 
     const loadStudios = async () => {
@@ -70,6 +87,11 @@ export default function MyListingsPage() {
         }
 
         const result = await response.json();
+
+        if (response.status === 401) {
+          router.replace("/login");
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(
@@ -100,7 +122,7 @@ export default function MyListingsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [session, sessionLoading, router]);
 
   // Delete studio
   const handleDelete = async () => {
@@ -117,11 +139,15 @@ export default function MyListingsPage() {
         },
       );
 
-      // A 204/empty response has no JSON body, so don't parse it.
       const contentType = response.headers.get("content-type");
       const result = contentType?.includes("application/json")
         ? await response.json()
         : null;
+
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(result?.message || "Could not delete this studio.");
@@ -153,6 +179,18 @@ export default function MyListingsPage() {
       studio.location.toLowerCase().includes(searchText)
     );
   });
+
+  // Keep private page content hidden until authentication is verified
+  if (sessionLoading || !session) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium">Checking your session...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background pb-20 text-foreground">
