@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Aperture, ArrowUpRight, Mail } from "lucide-react";
+import { Aperture, ArrowUpRight, Mail, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { FormEvent } from "react";
 
@@ -49,7 +49,8 @@ const categories = [
   { label: "Film Stages", value: "Film Stage" },
   { label: "Podcast Rooms", value: "Podcast Lounge" },
   { label: "Music Suites", value: "Music Suite" },
-  { label: "Art Workshops", value: "Workshop" },
+  { label: "Art Workshops", value: "Art Studio" },
+  { label: "Sound Stages", value: "Sound Stage" },
 ];
 
 export default function Footer() {
@@ -70,14 +71,28 @@ export default function Footer() {
   };
 
   return (
-    <footer className="border-t border-white/10 bg-[#111019] text-white">
-      <div className="mx-auto max-w-7xl px-5 pb-8 pt-16 sm:px-8 lg:px-10">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
+    <footer className="relative overflow-hidden border-t border-white/10 bg-[#111019] text-white">
+      {/* Background decoration */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-40 left-1/4 h-80 w-80 rounded-full bg-violet-600/10 blur-[120px]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-40 right-0 h-80 w-80 rounded-full bg-purple-600/10 blur-[120px]"
+      />
+
+      <div className="relative mx-auto max-w-7xl px-5 pb-8 pt-16 sm:px-8 sm:pt-20 lg:px-10">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_0.8fr_0.9fr_1.2fr] lg:gap-10">
           {/* Brand and mission */}
           <div>
-            <Link href="/" className="inline-flex items-center gap-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600">
-                <Aperture size={23} className="text-white" />
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-3"
+              aria-label="StudioSpace homepage"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg shadow-violet-900/30 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
+                <Aperture size={24} className="text-white" />
               </span>
 
               <span className="text-2xl font-bold tracking-tight">
@@ -85,51 +100,60 @@ export default function Footer() {
               </span>
             </Link>
 
-            <p className="mt-5 max-w-xs text-sm leading-7 text-white/60">
+            <p className="mt-5 max-w-xs text-sm leading-7 text-white/55">
               A creative space for creators. Discover inspiring studios, connect
-              with hosts, and bring your next big idea to life.
+              with talented hosts, and bring your next big idea to life.
             </p>
 
-            <div className="mt-6 flex items-center gap-3">
-              <a
-                href="https://x.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="StudioSpace on X"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-violet-500 hover:bg-violet-600 hover:text-white"
-              >
-                <XIcon size={17} />
-              </a>
+            <div className="mt-7">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                Follow our journey
+              </p>
 
-              <a
-                href="https://github.com/smerfan0009-sys/studio-space"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="StudioSpace on GitHub"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/70 transition hover:border-violet-500 hover:bg-violet-600 hover:text-white"
-              >
-                <GithubIcon size={18} />
-              </a>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://x.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="StudioSpace on X"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/65 transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/60 hover:bg-violet-600 hover:text-white hover:shadow-lg hover:shadow-violet-900/30"
+                >
+                  <XIcon size={17} />
+                </a>
+
+                <a
+                  href="https://github.com/smerfan0009-sys/studio-space"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="StudioSpace on GitHub"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-white/65 transition-all duration-300 hover:-translate-y-1 hover:border-violet-500/60 hover:bg-violet-600 hover:text-white hover:shadow-lg hover:shadow-violet-900/30"
+                >
+                  <GithubIcon size={18} />
+                </a>
+              </div>
             </div>
           </div>
 
           {/* Quick navigation */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-white">
               Quick Links
             </h3>
+
+            <div className="mt-5 h-0.5 w-8 rounded-full bg-violet-500" />
 
             <ul className="mt-6 space-y-4">
               {quickLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="group inline-flex items-center gap-1 text-sm text-white/60 transition hover:text-violet-400"
+                    className="group inline-flex items-center gap-2 text-sm text-white/55 transition-colors duration-200 hover:text-violet-400"
                   >
+                    <span className="h-1 w-1 rounded-full bg-violet-500 opacity-0 transition-opacity group-hover:opacity-100" />
                     {link.label}
                     <ArrowUpRight
                       size={13}
-                      className="opacity-0 transition group-hover:opacity-100"
+                      className="-translate-y-0.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100"
                     />
                   </Link>
                 </li>
@@ -139,17 +163,20 @@ export default function Footer() {
 
           {/* Popular categories */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-white">
               Popular Categories
             </h3>
+
+            <div className="mt-5 h-0.5 w-8 rounded-full bg-violet-500" />
 
             <ul className="mt-6 space-y-4">
               {categories.map((category) => (
                 <li key={category.value}>
                   <Link
                     href={`/studios?category=${encodeURIComponent(category.value)}`}
-                    className="text-sm text-white/60 transition hover:text-violet-400"
+                    className="group inline-flex items-center gap-2 text-sm text-white/55 transition-colors duration-200 hover:text-violet-400"
                   >
+                    <span className="h-1 w-1 rounded-full bg-violet-500 opacity-0 transition-opacity group-hover:opacity-100" />
                     {category.label}
                   </Link>
                 </li>
@@ -159,21 +186,27 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
-              Stay Inspired
-            </h3>
+            <div className="flex items-center gap-2">
+              <Sparkles size={17} className="text-violet-400" />
+              <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-white">
+                Stay Inspired
+              </h3>
+            </div>
 
-            <p className="mt-6 text-sm leading-7 text-white/60">
-              Get updates about creative spaces and new opportunities.
+            <div className="mt-5 h-0.5 w-8 rounded-full bg-violet-500" />
+
+            <p className="mt-6 text-sm leading-7 text-white/55">
+              Get updates about creative spaces, fresh opportunities, and
+              inspiration for your next project.
             </p>
 
-            <form onSubmit={handleSubscribe} className="mt-5">
+            <form onSubmit={handleSubscribe} className="mt-6">
               <label htmlFor="footer-email" className="sr-only">
                 Email address
               </label>
 
-              <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] p-1.5 focus-within:border-violet-500">
-                <Mail size={18} className="ml-2 shrink-0 text-white/40" />
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-1.5 transition-colors focus-within:border-violet-500/70 focus-within:bg-white/[0.06]">
+                <Mail size={18} className="ml-2 shrink-0 text-violet-400" />
 
                 <input
                   id="footer-email"
@@ -181,27 +214,39 @@ export default function Footer() {
                   type="email"
                   required
                   placeholder="Your email address"
-                  className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/35"
+                  className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-white outline-none placeholder:text-white/35"
                 />
 
                 <button
                   type="submit"
                   aria-label="Subscribe to newsletter"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition-all duration-300 hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-900/40 active:scale-95"
                 >
-                  <ArrowUpRight size={18} />
+                  <ArrowUpRight size={19} />
                 </button>
               </div>
+
+              <p className="mt-3 text-xs text-white/35">
+                Stay connected with the creative community.
+              </p>
             </form>
           </div>
         </div>
 
         {/* Copyright and terms */}
-        <div className="mt-14 flex flex-col gap-4 border-t border-white/10 pt-7 text-sm text-white/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 StudioSpace. All rights reserved.</p>
+        <div className="mt-16 flex flex-col gap-4 border-t border-white/10 pt-7 text-sm text-white/40 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © 2026{" "}
+            <span className="font-semibold text-white/65">StudioSpace</span>.
+            All rights reserved.
+          </p>
 
-          <Link href="/terms" className="transition hover:text-violet-400">
+          <Link
+            href="/terms"
+            className="inline-flex items-center gap-1 transition-colors hover:text-violet-400"
+          >
             Terms & Conditions
+            <ArrowUpRight size={13} />
           </Link>
         </div>
       </div>
