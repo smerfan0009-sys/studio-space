@@ -1,6 +1,6 @@
 # StudioSpace — Creative Studio Marketplace
 
-**Live Website:** [Add Your Deployed Website URL]
+**Live Website:** https://studio-space-nine.vercel.app/
 
 StudioSpace is a peer-to-peer marketplace where creators can discover and book creative spaces such as photography studios, film stages, podcast rooms, music suites, and art workshops.
 
