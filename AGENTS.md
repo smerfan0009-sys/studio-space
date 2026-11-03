@@ -13,12 +13,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Routes: `/`, `/add-studio`, `/login`, `/register`, `/my-listings`. The navbar also links `/studios`, `/dashboard`, `/my-bookings` — those pages do not exist yet (404).
 - `src/components/ui/` is 63 generated shadcn/ui files; hand-written UI lives in `src/components/` and `src/app/`.
 
-## Backend is external — not in this repo
-- Auth and data come from a separate API at `NEXT_PUBLIC_API_URL` (default `http://localhost:7000`). There are **no** `src/app/api` route handlers and no middleware here.
-- Only the `better-auth` client is present (`src/lib/auth-client.ts`); pages use `authClient.useSession()`, `signIn.email`, `signUp.email`, `signOut`, `signIn.social({ provider: "google" })`.
-- Backend lives in sibling folder `../studio-space-server` (Express + Better Auth + MongoDB adapter), not inside this repo. Only the `better-auth` client is present here (`src/lib/auth-client.ts`).
-- `mongodb`, `@better-auth/mongo-adapter`, and the `MONGODB_URI` / `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` keys in `.env` / `.env.local` belong to that backend. `src/lib/api/README.md` is an empty placeholder — don't add DB code here unless asked.
-- Studio CRUD contract: `POST ${API_URL}/api/studios`, `GET /api/my-listings`, `DELETE /api/studios/:id`, all with `credentials: "include"`. `src/app/my-listings/page.tsx` and `src/lib/auth-client.ts` fall back to `http://localhost:7000` if `NEXT_PUBLIC_API_URL` is unset.
+## Auth / Better Auth (external backend)
+- Only `src/lib/auth-client.ts` lives here. Backend (`../studio-space-server`, Express + Better Auth + MongoDB adapter) is a sibling folder — no DB/auth route code belongs in this repo.
+- `baseURL` behavior is non-obvious: can be hardcoded `process.env.NEXT_PUBLIC_API_URL` (direct to backend) or `window.location.origin` (to leverage `next.config.ts` rewrites `/api/:path*` → `https://studio-space-server-weld.vercel.app`). Cookie domain fails when frontend (`studio-space-nine`) proxies to backend domain through rewrites unless cookie `domain` aligns — this is the `state_mismatch` source.
+- Always include `fetchOptions: { credentials: "include" }`; pages call `authClient.signIn.social({ provider: "google", callbackURL: ... })` and `authClient.signIn.email()`.
+- `.env.local`: `NEXT_PUBLIC_API_URL` = backend; `NEXT_PUBLIC_APP_URL` = frontend (`studio-space-nine`). Server `.env.production`: `BETTER_AUTH_URL` = backend; `CLIENT_URL` = frontend; `GOOGLE_CLIENT_ID/SECRET` set.
+- `src/lib/api/README.md` is empty — don't invent DB code here unless asked.
 
 ## Commands
 - `npm run dev` — turbopack + React Compiler (`next.config.ts` also enables `cacheComponents` and `partialPrefetching`). Don't remove the turbopack CSS-loader rule (`*.css` → `@tailwindcss/turbopack`) when editing config.
