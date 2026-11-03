@@ -16,6 +16,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Backend is external — not in this repo
 - Auth and data come from a separate API at `NEXT_PUBLIC_API_URL` (default `http://localhost:7000`). There are **no** `src/app/api` route handlers and no middleware here.
 - Only the `better-auth` client is present (`src/lib/auth-client.ts`); pages use `authClient.useSession()`, `signIn.email`, `signUp.email`, `signOut`, `signIn.social({ provider: "google" })`.
+- Backend lives in sibling folder `../studio-space-server` (Express + Better Auth + MongoDB adapter), not inside this repo. Only the `better-auth` client is present here (`src/lib/auth-client.ts`).
 - `mongodb`, `@better-auth/mongo-adapter`, and the `MONGODB_URI` / `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` keys in `.env` / `.env.local` belong to that backend. `src/lib/api/README.md` is an empty placeholder — don't add DB code here unless asked.
 - Studio CRUD contract: `POST ${API_URL}/api/studios`, `GET /api/my-listings`, `DELETE /api/studios/:id`, all with `credentials: "include"`. `src/app/my-listings/page.tsx` and `src/lib/auth-client.ts` fall back to `http://localhost:7000` if `NEXT_PUBLIC_API_URL` is unset.
 
@@ -32,7 +33,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Dark mode is hand-rolled: a blocking inline script in `src/app/layout.tsx` applies the saved/system theme to `<html>` before paint, and `ThemeToggle` stays stateless (CSS `dark:` variants pick the icon). No `next-themes`.
 - Fonts via `next/font/google` (Inter + Playfair Display) exposed as `--font-sans` / `--font-heading`; use `font-heading` for headings.
 - `Navbar` is rendered once in `src/app/layout.tsx`, not per page.
-- Images are raw `<img>` with remote Unsplash URLs; `next.config.ts` has no `images.remotePatterns`, so moving to `next/image` requires config first.
+- Most images are raw `<img>` with remote Unsplash URLs; `next.config.ts` has no `images.remotePatterns`. Exception: `src/app/studios/[id]/page.tsx` uses `next/image` — production build will break images there until config is added.
 
 ## Keep the block above
 - `next dev` regenerates the top block (see `node_modules/next/dist/server/lib/generate-agent-files.js`); commit it with your changes so the tree stays clean.
