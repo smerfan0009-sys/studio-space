@@ -17,10 +17,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Auth and data come from a separate API at `NEXT_PUBLIC_API_URL` (default `http://localhost:7000`). There are **no** `src/app/api` route handlers and no middleware here.
 - Only the `better-auth` client is present (`src/lib/auth-client.ts`); pages use `authClient.useSession()`, `signIn.email`, `signUp.email`, `signOut`, `signIn.social({ provider: "google" })`.
 - `mongodb`, `@better-auth/mongo-adapter`, and the `MONGODB_URI` / `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` keys in `.env` / `.env.local` belong to that backend. `src/lib/api/README.md` is an empty placeholder — don't add DB code here unless asked.
-- Studio CRUD contract: `POST ${API_URL}/api/studios`, `GET /api/my-listings`, `DELETE /api/studios/:id`, all with `credentials: "include"`. `src/app/my-listings/page.tsx` hardcodes `http://localhost:7000` instead of reading the env var.
+- Studio CRUD contract: `POST ${API_URL}/api/studios`, `GET /api/my-listings`, `DELETE /api/studios/:id`, all with `credentials: "include"`. `src/app/my-listings/page.tsx` and `src/lib/auth-client.ts` fall back to `http://localhost:7000` if `NEXT_PUBLIC_API_URL` is unset.
 
 ## Commands
-- `npm run dev` — turbopack + React Compiler (`next.config.ts` also enables `cacheComponents` and `partialPrefetching`).
+- `npm run dev` — turbopack + React Compiler (`next.config.ts` also enables `cacheComponents` and `partialPrefetching`). Don't remove the turbopack CSS-loader rule (`*.css` → `@tailwindcss/turbopack`) when editing config.
 - `npm run build` — typecheck + static prerender; currently passes. Use this as the verification gate.
 - `npm run lint` — bare `eslint`; passes with 5 pre-existing `<img>` warnings. `src/components/ui/**` is exempted from `no-explicit-any` and `react-hooks/set-state-in-effect` in `eslint.config.mjs` so generated primitives stay untouched.
 - No test runner or `test` script — don't invent `npm test`.

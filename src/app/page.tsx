@@ -1,6 +1,7 @@
 ﻿import AboutUs from "@/components/AboutUs";
 import FeaturedStudios from "@/components/FeaturedStudios";
 import Hero from "@/components/Hero";
+import HostGuarantee from "@/components/HostGuarantee";
 import HowItWorks from "@/components/HowItWorks";
 import StudioCategories from "@/components/StudioCategories";
 
@@ -11,6 +12,7 @@ export default function HomePage() {
       <StudioCategories />
       <FeaturedStudios />
       <HowItWorks />
+      <HostGuarantee />
       <AboutUs />
     </div>
   );

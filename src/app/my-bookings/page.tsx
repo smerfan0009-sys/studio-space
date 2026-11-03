@@ -14,12 +14,13 @@ import {
   MapPin,
   RefreshCw,
   Search,
+  Send,
+  Star,
   Ticket,
   X,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-
 import { authClient } from "@/lib/auth-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
@@ -61,10 +62,7 @@ function isApiPayload(value: unknown): value is ApiPayload {
 }
 
 function extractBookings(payload: unknown): Booking[] {
-  if (Array.isArray(payload)) {
-    return payload as Booking[];
-  }
-
+  if (Array.isArray(payload)) return payload as Booking[];
   if (!isApiPayload(payload)) return [];
 
   const possibleArrays = [
@@ -76,7 +74,6 @@ function extractBookings(payload: unknown): Booking[] {
   ];
 
   const result = possibleArrays.find(Array.isArray);
-
   return Array.isArray(result) ? (result as Booking[]) : [];
 }
 
@@ -92,10 +89,7 @@ function formatDate(date?: string) {
   if (!date) return "Date not available";
 
   const parsed = new Date(date);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "Date not available";
-  }
+  if (Number.isNaN(parsed.getTime())) return "Date not available";
 
   return parsed.toLocaleDateString("en-BD", {
     day: "numeric",
@@ -108,7 +102,6 @@ function formatTime(date?: string) {
   if (!date) return "";
 
   const parsed = new Date(date);
-
   if (Number.isNaN(parsed.getTime())) return "";
 
   return parsed.toLocaleTimeString("en-BD", {
@@ -163,12 +156,10 @@ function StatCard({
             {value}
           </h3>
         </div>
-
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Icon className="h-5 w-5" />
         </div>
       </div>
-
       <p className="mt-3 text-xs text-muted-foreground">{description}</p>
     </div>
   );
@@ -178,13 +169,11 @@ function BookingSkeleton() {
   return (
     <div className="animate-pulse space-y-5">
       <div className="h-8 w-56 rounded-lg bg-muted" />
-
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div key={index} className="h-32 rounded-2xl bg-muted" />
         ))}
       </div>
-
       {Array.from({ length: 3 }).map((_, index) => (
         <div key={index} className="h-52 rounded-2xl bg-muted" />
       ))}
@@ -225,7 +214,6 @@ function EmptyBookings({ filter }: { filter: BookingFilter }) {
 export default function MyBookingsPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
-
   const user = session?.user;
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -237,7 +225,15 @@ export default function MyBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Authentication guard
+  // Review modal state
+  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Prevent duplicate reviews during the current page session
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (!isPending && !user) {
       router.replace("/login?callbackURL=%2Fmy-bookings");
@@ -292,11 +288,9 @@ export default function MyBookingsPage() {
     }
 
     void loadBookings();
-
     return () => controller.abort();
   }, [user, refreshKey]);
 
-  // Booking statistics
   const counts = useMemo(() => {
     return {
       total: bookings.length,
@@ -315,7 +309,6 @@ export default function MyBookingsPage() {
     };
   }, [bookings]);
 
-  // Search and filter bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
       const matchesFilter =
@@ -349,9 +342,7 @@ export default function MyBookingsPage() {
         {
           method: "PATCH",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         },
       );
 
@@ -387,7 +378,74 @@ export default function MyBookingsPage() {
     }
   };
 
-  // Refresh bookings
+  // Submit review
+  const handleSubmitReview = async () => {
+    if (!reviewBooking) return;
+
+    if (!reviewBooking.studioId) {
+      toast.error("Studio information is missing for this booking.");
+      return;
+    }
+
+    if (reviewComment.trim().length < 5) {
+      toast.error("Please write at least 5 characters in your review.");
+      return;
+    }
+
+    if (reviewComment.trim().length > 1000) {
+      toast.error("Your review cannot exceed 1000 characters.");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/reviews`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: reviewBooking._id,
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+        }),
+      });
+
+      const payload: unknown = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          isApiPayload(payload) && typeof payload.message === "string"
+            ? payload.message
+            : "Could not submit your review.";
+
+        throw new Error(message);
+      }
+
+      setReviewedBookingIds((previous) =>
+        previous.includes(reviewBooking._id)
+          ? previous
+          : [...previous, reviewBooking._id],
+      );
+
+      toast.success("Your rating has been submitted successfully!");
+
+      setReviewBooking(null);
+      setReviewRating(5);
+      setReviewComment("");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting your review.",
+      );
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const handleRetry = () => {
     setIsLoading(true);
     setError("");
@@ -429,7 +487,7 @@ export default function MyBookingsPage() {
 
             <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
               Keep track of your studio reservations, manage upcoming sessions,
-              and get ready to create something amazing.
+              and rate studios after your booking is confirmed.
             </p>
           </div>
 
@@ -501,7 +559,7 @@ export default function MyBookingsPage() {
               />
             </section>
 
-            {/* Booking List Header */}
+            {/* Booking List */}
             <section>
               <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                 <div>
@@ -576,6 +634,17 @@ export default function MyBookingsPage() {
 
                     const start = booking.startTime || booking.bookingDate;
                     const status = booking.status || "Pending";
+                    const normalizedStatus = status.toLowerCase();
+
+                    // Customer can review as soon as booking is confirmed.
+                    // Completed bookings can also be reviewed.
+                    const canReview =
+                      normalizedStatus === "confirmed" ||
+                      normalizedStatus === "completed";
+
+                    const hasReviewed = reviewedBookingIds.includes(
+                      booking._id,
+                    );
 
                     return (
                       <article
@@ -683,7 +752,30 @@ export default function MyBookingsPage() {
                                   </Link>
                                 )}
 
-                                {status.toLowerCase() === "pending" && (
+                                {/* Review button for Confirmed or Completed bookings */}
+                                {canReview && !hasReviewed && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setReviewBooking(booking);
+                                      setReviewRating(5);
+                                      setReviewComment("");
+                                    }}
+                                    className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
+                                  >
+                                    <Star className="h-4 w-4 fill-current" />
+                                    Rate Studio
+                                  </button>
+                                )}
+
+                                {hasReviewed && (
+                                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Reviewed
+                                  </span>
+                                )}
+
+                                {normalizedStatus === "pending" && (
                                   <button
                                     type="button"
                                     onClick={() => setSelectedBooking(booking)}
@@ -704,6 +796,154 @@ export default function MyBookingsPage() {
               )}
             </section>
           </>
+        )}
+
+        {/* Review Modal */}
+        {reviewBooking && (
+          <div
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !isSubmittingReview) {
+                setReviewBooking(null);
+              }
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="review-title"
+              className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+                    <Star className="h-6 w-6 fill-current" />
+                  </div>
+
+                  <h2
+                    id="review-title"
+                    className="mt-5 text-xl font-bold text-foreground"
+                  >
+                    Rate this studio
+                  </h2>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {reviewBooking.studioTitle ||
+                      reviewBooking.studioName ||
+                      "Your studio booking"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isSubmittingReview}
+                  onClick={() => setReviewBooking(null)}
+                  aria-label="Close review form"
+                  className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Star rating */}
+              <div className="mt-7">
+                <p className="mb-3 text-sm font-semibold text-foreground">
+                  Your rating
+                </p>
+
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      disabled={isSubmittingReview}
+                      onClick={() => setReviewRating(star)}
+                      aria-label={`Rate ${star} out of 5`}
+                      className="rounded-lg p-1 transition hover:scale-110 disabled:cursor-not-allowed"
+                    >
+                      <Star
+                        className={`h-8 w-8 ${
+                          star <= reviewRating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-muted-foreground/30"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                  {reviewRating === 5
+                    ? "Excellent!"
+                    : reviewRating === 4
+                      ? "Very good"
+                      : reviewRating === 3
+                        ? "Good"
+                        : reviewRating === 2
+                          ? "Fair"
+                          : "Needs improvement"}
+                </p>
+              </div>
+
+              {/* Review comment */}
+              <div className="mt-6">
+                <label
+                  htmlFor="review-comment"
+                  className="mb-2 block text-sm font-semibold text-foreground"
+                >
+                  Share your first impression
+                </label>
+
+                <textarea
+                  id="review-comment"
+                  value={reviewComment}
+                  onChange={(event) => setReviewComment(event.target.value)}
+                  disabled={isSubmittingReview}
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="Share your thoughts about the studio..."
+                  className="w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary disabled:opacity-60"
+                />
+
+                <div className="mt-1 flex justify-between gap-2 text-xs text-muted-foreground">
+                  <span>Minimum 5 characters</span>
+                  <span>{reviewComment.length}/1000</span>
+                </div>
+              </div>
+
+              <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  disabled={isSubmittingReview}
+                  onClick={() => setReviewBooking(null)}
+                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-muted disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    isSubmittingReview || reviewComment.trim().length < 5
+                  }
+                  onClick={handleSubmitReview}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Submit Rating
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Cancel Confirmation Modal */}

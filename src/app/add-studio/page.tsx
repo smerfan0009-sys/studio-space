@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,6 +23,9 @@ import {
   CheckCircle2,
   LockKeyhole,
   LoaderCircle,
+  Upload,
+  X,
+  Check,
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
@@ -42,6 +44,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const categories = [
   "Photo Studio",
@@ -65,12 +71,11 @@ const amenityOptions = [
 
 export default function AddStudioPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Authentication session
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
 
-  // Form states
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
@@ -81,15 +86,22 @@ export default function AddStudioPage() {
   const [overview, setOverview] = useState("");
   const [amenities, setAmenities] = useState<string[]>([]);
 
-  // UI states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [localPreview, setLocalPreview] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect unauthenticated users
   useEffect(() => {
     if (!isPending && !user) {
       router.replace("/login");
     }
   }, [isPending, user, router]);
+
+  useEffect(() => {
+    return () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
 
   const toggleAmenity = (amenity: string) => {
     setAmenities((current) =>
@@ -97,6 +109,67 @@ export default function AddStudioPage() {
         ? current.filter((item) => item !== amenity)
         : [...current, amenity],
     );
+  };
+
+  const handleFileChange = (file?: File) => {
+    if (!file) return;
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please select a JPG, PNG, WebP or GIF image.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image size must be 5 MB or less.");
+      return;
+    }
+
+    if (localPreview) URL.revokeObjectURL(localPreview);
+
+    setSelectedFile(file);
+    setLocalPreview(URL.createObjectURL(file));
+    setImageUrl("");
+  };
+
+  const removeImage = () => {
+    if (localPreview) URL.revokeObjectURL(localPreview);
+
+    setSelectedFile(null);
+    setLocalPreview("");
+    setImageUrl("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadImage = async (): Promise<string> => {
+    if (!selectedFile) return imageUrl;
+
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+
+    const response = await fetch(`${API_URL}/api/upload-image`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      throw new Error(result.message || "Image upload failed.");
+    }
+
+    if (!result.imageUrl) {
+      throw new Error("Image uploaded, but no image URL was returned.");
+    }
+
+    return result.imageUrl;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -108,21 +181,56 @@ export default function AddStudioPage() {
       return;
     }
 
+    if (!selectedFile && !imageUrl) {
+      toast.error("Please select a studio cover image.");
+      return;
+    }
+
+    if (
+      Number(hourlyRate) < 1 ||
+      Number(securityDeposit) < 0 ||
+      Number(capacity) < 1
+    ) {
+      toast.error("Please enter valid pricing and capacity values.");
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const studioData = {
-      title: title.trim(),
-      category,
-      hourlyRate: Number(hourlyRate),
-      securityDeposit: Number(securityDeposit),
-      capacity: Number(capacity),
-      location: location.trim(),
-      imageUrl: imageUrl.trim(),
-      amenities,
-      overview: overview.trim(),
-    };
-
     try {
+      let finalImageUrl = imageUrl;
+
+      if (selectedFile) {
+        setIsUploading(true);
+        toast.info("Uploading your studio image...");
+
+        finalImageUrl = await uploadImage();
+
+        setImageUrl(finalImageUrl);
+        setSelectedFile(null);
+        setLocalPreview("");
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+
+        toast.success("Image uploaded successfully!");
+      }
+
+      setIsUploading(false);
+
+      const studioData = {
+        title: title.trim(),
+        category,
+        hourlyRate: Number(hourlyRate),
+        securityDeposit: Number(securityDeposit),
+        capacity: Number(capacity),
+        location: location.trim(),
+        imageUrl: finalImageUrl,
+        amenities,
+        overview: overview.trim(),
+      };
+
       const response = await fetch(`${API_URL}/api/studios`, {
         method: "POST",
         credentials: "include",
@@ -146,6 +254,8 @@ export default function AddStudioPage() {
       router.push("/my-listings");
       router.refresh();
     } catch (error) {
+      setIsUploading(false);
+
       toast.error(
         error instanceof Error
           ? error.message
@@ -156,7 +266,6 @@ export default function AddStudioPage() {
     }
   };
 
-  // Wait until authentication status is checked
   if (isPending || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
@@ -170,9 +279,10 @@ export default function AddStudioPage() {
     );
   }
 
+  const previewImage = localPreview || imageUrl;
+
   return (
     <main className="min-h-screen bg-background pb-20 text-foreground">
-      {/* Page Heading */}
       <section className="px-4 pb-8 pt-10 sm:px-6 lg:pb-12 lg:pt-14">
         <div className="mx-auto max-w-7xl">
           <Link
@@ -207,7 +317,6 @@ export default function AddStudioPage() {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Aperture className="h-6 w-6" />
               </div>
-
               <div>
                 <p className="font-heading text-lg font-bold">StudioSpace</p>
                 <p className="text-xs text-muted-foreground">
@@ -219,18 +328,15 @@ export default function AddStudioPage() {
         </div>
       </section>
 
-      {/* Main Form */}
       <section className="px-4 sm:px-6">
         <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-7 lg:grid-cols-[1fr_340px]">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
             <Card className="overflow-hidden rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="border-b border-border/60 px-6 py-6 sm:px-8">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Camera className="h-5 w-5" />
                   </div>
-
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Information
@@ -333,14 +439,12 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Location */}
             <Card className="rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="px-6 pt-6 sm:px-8">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <MapPin className="h-5 w-5" />
                   </div>
-
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Location
@@ -367,75 +471,105 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Image */}
             <Card className="rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="px-6 pt-6 sm:px-8">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <ImagePlus className="h-5 w-5" />
                   </div>
-
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Cover Image
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Add a high-quality image of your workspace.
+                      Upload a high-quality image of your workspace.
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4 px-6 pb-7 pt-5 sm:px-8">
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL *</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    placeholder="https://example.com/studio-image.jpg"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    required
-                    className="h-12 rounded-xl bg-background"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Paste your image URL here. Image upload integration will be
-                    added later.
-                  </p>
-                </div>
+                <input
+                  ref={fileInputRef}
+                  id="studioImage"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e.target.files?.[0])}
+                />
 
-                {imageUrl && (
-                  <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted">
-                    <img
-                      src={imageUrl}
-                      alt="Studio preview"
-                      className="h-56 w-full object-cover"
-                    />
+                {!previewImage ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
+                    className="flex min-h-48 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30 px-5 text-center transition-colors hover:border-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-semibold">
+                      Click to upload studio image
+                    </span>
+                    <span className="mt-2 text-xs text-muted-foreground">
+                      JPG, PNG, WebP or GIF · Maximum 5 MB
+                    </span>
+                  </button>
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border border-border/60">
+                    <div className="relative">
+                      <img
+                        src={previewImage}
+                        alt="Studio cover preview"
+                        className="h-64 w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        disabled={isSubmitting}
+                        aria-label="Remove image"
+                        className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">
+                          {selectedFile ? selectedFile.name : "Image uploaded"}
+                        </span>
+                      </div>
+                      {selectedFile && (
+                        <span className="text-xs text-muted-foreground">
+                          {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {!imageUrl && (
-                  <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30 text-center">
-                    <ImagePlus className="mb-3 h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm font-medium">
-                      Your studio image preview
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Image preview will appear here.
-                    </p>
+                {selectedFile && (
+                  <p className="text-xs text-muted-foreground">
+                    Image will be uploaded when you publish your studio.
+                  </p>
+                )}
+
+                {isUploading && (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Uploading image...
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Amenities */}
             <Card className="rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="px-6 pt-6 sm:px-8">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Sparkles className="h-5 w-5" />
                   </div>
-
                   <div>
                     <CardTitle className="font-heading text-xl">
                       Studio Amenities
@@ -482,14 +616,12 @@ export default function AddStudioPage() {
                     );
                   })}
                 </div>
-
                 <p className="mt-4 text-xs text-muted-foreground">
                   {amenities.length} amenities selected
                 </p>
               </CardContent>
             </Card>
 
-            {/* Overview */}
             <Card className="rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="px-6 pt-6 sm:px-8">
                 <CardTitle className="font-heading text-xl">
@@ -499,7 +631,6 @@ export default function AddStudioPage() {
                   Describe what makes your space special.
                 </CardDescription>
               </CardHeader>
-
               <CardContent className="px-6 pb-7 sm:px-8">
                 <div className="space-y-2">
                   <Label htmlFor="overview">Detailed Overview *</Label>
@@ -519,7 +650,6 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Host Information */}
             <Card className="rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="px-6 pt-6 sm:px-8">
                 <div className="flex items-center justify-between">
@@ -531,7 +661,6 @@ export default function AddStudioPage() {
                       Your account information will be attached to this listing.
                     </CardDescription>
                   </div>
-
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                     <LockKeyhole className="h-5 w-5" />
                   </div>
@@ -544,19 +673,16 @@ export default function AddStudioPage() {
                   <Input
                     id="hostName"
                     value={user.name || ""}
-                    placeholder="Your account name"
                     readOnly
                     className="h-12 rounded-xl bg-muted/50 text-muted-foreground"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="hostEmail">Host Email</Label>
                   <Input
                     id="hostEmail"
                     type="email"
                     value={user.email || ""}
-                    placeholder="Your account email"
                     readOnly
                     className="h-12 rounded-xl bg-muted/50 text-muted-foreground"
                   />
@@ -564,26 +690,26 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Actions */}
             <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between">
               <Button
                 type="button"
                 variant="outline"
                 className="h-12 rounded-full px-7"
                 onClick={() => router.push("/")}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
 
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
                 className="h-12 rounded-full px-8 shadow-md shadow-primary/15"
               >
                 {isSubmitting ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Publishing...
+                    {isUploading ? "Uploading image..." : "Publishing..."}
                   </>
                 ) : (
                   <>
@@ -595,9 +721,7 @@ export default function AddStudioPage() {
             </div>
           </form>
 
-          {/* Right Sidebar */}
           <aside className="space-y-6 lg:sticky lg:top-24">
-            {/* Preview Card */}
             <Card className="overflow-hidden rounded-3xl border-border/60 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -616,9 +740,9 @@ export default function AddStudioPage() {
               <CardContent className="pb-5">
                 <div className="overflow-hidden rounded-2xl border border-border/60 bg-background">
                   <div className="relative h-48 overflow-hidden bg-muted">
-                    {imageUrl ? (
+                    {previewImage ? (
                       <img
-                        src={imageUrl}
+                        src={previewImage}
                         alt="Listing preview"
                         className="h-full w-full object-cover"
                       />
@@ -628,7 +752,6 @@ export default function AddStudioPage() {
                         <span className="text-xs">Studio cover image</span>
                       </div>
                     )}
-
                     {category && (
                       <span className="absolute left-3 top-3 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur-md">
                         {category}
@@ -640,12 +763,10 @@ export default function AddStudioPage() {
                     <h3 className="font-heading text-lg font-bold">
                       {title || "Your Studio Name"}
                     </h3>
-
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="h-3.5 w-3.5 text-primary" />
                       {location || "Studio location"}
                     </div>
-
                     <div className="flex items-center justify-between border-t border-border pt-3">
                       <span className="text-xs text-muted-foreground">
                         Starting from
@@ -663,7 +784,6 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Tips */}
             <Card className="rounded-3xl border-primary/15 bg-primary/5 shadow-none">
               <CardContent className="space-y-5 p-6">
                 <div className="flex items-center gap-3">
@@ -706,7 +826,6 @@ export default function AddStudioPage() {
               </CardContent>
             </Card>
 
-            {/* Support Card */}
             <div className="flex gap-3 rounded-2xl border border-border/60 bg-card p-5">
               <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
               <div>
