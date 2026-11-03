@@ -5,6 +5,7 @@ import {
   Clapperboard,
   ArrowRight,
   Sparkles,
+  Link,
 } from "lucide-react";
 
 const steps = [
@@ -126,13 +127,13 @@ export default function HowItWorks() {
             </p>
           </div>
 
-          <a
+          <Link
             href="/studios"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
           >
             Explore Studios
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
         </div>
       </div>
     </section>

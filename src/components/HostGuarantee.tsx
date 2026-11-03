@@ -7,6 +7,7 @@ import {
   Headset,
   ArrowUpRight,
   CheckCircle2,
+  Link,
 } from "lucide-react";
 
 const guarantees = [
@@ -130,13 +131,13 @@ export default function HostGuarantee() {
             </p>
           </div>
 
-          <a
+          <Link
             href="/studios"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
           >
             Explore Studios
             <ArrowUpRight size={17} />
-          </a>
+          </Link>
         </div>
       </div>
     </section>

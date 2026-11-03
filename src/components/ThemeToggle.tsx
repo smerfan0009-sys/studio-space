@@ -6,20 +6,14 @@ import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "theme";
 
-/**
- * Applies the theme to <html>. Kept outside React state on purpose: the icon is
- * driven by CSS `dark:` variants, so there is nothing to hydrate and no
- * server/client mismatch.
- */
+
 function applyTheme(theme: "light" | "dark") {
   document.documentElement.classList.toggle("dark", theme === "dark");
   localStorage.setItem(STORAGE_KEY, theme);
 }
 
 export function ThemeToggle() {
-  // The inline script in layout.tsx sets `.dark` before paint. React's dev-mode
-  // Strict Mode remount can clear attributes it manages on <html>, so re-apply
-  // the stored theme here. No-op in production.
+
   useLayoutEffect(() => {
     const savedTheme = localStorage.getItem(STORAGE_KEY);
 

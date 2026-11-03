@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -14,6 +14,7 @@ import {
   X,
   Building2,
 } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:7000";
 
@@ -48,6 +49,10 @@ type SortOption = "newest" | "rating" | "price-low" | "price-high";
 
 function StudiosContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const { data: session, isPending } = authClient.useSession();
+  const user = session?.user;
 
   const requestedCategory = searchParams.get("category");
 
@@ -62,84 +67,55 @@ function StudiosContent() {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  // Fetch studios for retry.
-  const loadStudios = useCallback(async (signal?: AbortSignal) => {
-    try {
-      setLoading(true);
-      setError("");
+  // Redirect users who are not logged in.
+  useEffect(() => {
+    if (isPending) return;
 
-      const response = await fetch(`${API_URL}/api/studios`, {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-        signal,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || result.success === false) {
-        throw new Error(result.message || "Failed to load studios.");
-      }
-
-      const studioList = Array.isArray(result)
-        ? result
-        : result.studios || result.data || result.result || [];
-
-      if (!Array.isArray(studioList)) {
-        throw new Error("Invalid studio data received from server.");
-      }
-
-      setStudios(studioList);
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        return;
-      }
-
-      console.error("Fetch studios error:", err);
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+    if (!user) {
+      router.replace(`/login?callbackURL=${encodeURIComponent("/studios")}`);
     }
+  }, [isPending, user, router]);
+
+  // Fetch studios and return data without updating React state.
+  const fetchStudios = useCallback(async (signal?: AbortSignal) => {
+    const response = await fetch(`${API_URL}/api/studios`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      signal,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.message || "Failed to load studios.");
+    }
+
+    const studioList = Array.isArray(result)
+      ? result
+      : result.studios || result.data || result.result || [];
+
+    if (!Array.isArray(studioList)) {
+      throw new Error("Invalid studio data received from server.");
+    }
+
+    return studioList as Studio[];
   }, []);
 
-  // Initial fetch.
+  // Fetch only after authentication is confirmed.
   useEffect(() => {
+    if (isPending || !user) return;
+
     const controller = new AbortController();
 
     const load = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/studios`, {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          signal: controller.signal,
-        });
+        const studioList = await fetchStudios(controller.signal);
 
-        const result = await response.json();
+        if (controller.signal.aborted) return;
 
-        if (!response.ok || result.success === false) {
-          throw new Error(result.message || "Failed to load studios.");
-        }
-
-        const studioList = Array.isArray(result)
-          ? result
-          : result.studios || result.data || result.result || [];
-
-        if (!Array.isArray(studioList)) {
-          throw new Error("Invalid studio data received from server.");
-        }
-
-        if (!controller.signal.aborted) {
-          setStudios(studioList);
-          setError("");
-        }
+        setStudios(studioList);
+        setError("");
       } catch (err) {
         if (controller.signal.aborted) return;
 
@@ -162,12 +138,31 @@ function StudiosContent() {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [isPending, user, fetchStudios]);
 
-  const handleRetry = () => {
-    void loadStudios();
+  // Retry is triggered by a user interaction.
+  const handleRetry = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const studioList = await fetchStudios();
+
+      setStudios(studioList);
+    } catch (err) {
+      console.error("Fetch studios error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Search, filter and sort studios.
   const filteredStudios = useMemo(() => {
     let result = [...studios];
 
@@ -217,6 +212,21 @@ function StudiosContent() {
     setActiveCategory("All Studios");
     setSortBy("newest");
   };
+
+  // Hide the page while checking authentication or redirecting.
+  if (isPending || !user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f4f0] dark:bg-[#12111a]">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+
+          <p className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+            Checking your login...
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f4f0] text-[#1a1a2e] dark:bg-[#12111a] dark:text-white">

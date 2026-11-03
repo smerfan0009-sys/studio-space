@@ -92,6 +92,17 @@ function StudioDetailsContent() {
   const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
+    if (isPending) return;
+
+    // Redirect unauthenticated users to login.
+    if (!user) {
+      const callbackURL = `/studios/${encodeURIComponent(id)}`;
+
+      router.replace(`/login?callbackURL=${encodeURIComponent(callbackURL)}`);
+
+      return;
+    }
+
     if (!id) return;
 
     const controller = new AbortController();
@@ -152,9 +163,9 @@ function StudioDetailsContent() {
     fetchStudio();
 
     return () => controller.abort();
-  }, [id, retryCount]);
-
-  const isLoading = !result || result.id !== id;
+  }, [id, retryCount, isPending, user, router]);
+  
+  const isLoading = isPending || !result || result.id !== id;
   const studio = result?.id === id ? result.studio : null;
   const error = result?.id === id ? result.error : undefined;
 

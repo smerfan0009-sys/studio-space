@@ -20,6 +20,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+function getSafeCallbackURL() {
+  if (typeof window === "undefined") return "/";
+
+  const callbackURL = new URLSearchParams(window.location.search).get(
+    "callbackURL",
+  );
+
+  // Only allow safe internal application paths.
+  if (
+    !callbackURL ||
+    !callbackURL.startsWith("/") ||
+    callbackURL.startsWith("//") ||
+    callbackURL.startsWith("/login")
+  ) {
+    return "/";
+  }
+
+  return callbackURL;
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -29,17 +49,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isLoading || isGoogleLoading) return;
+
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
 
+    const callbackURL = getSafeCallbackURL();
+
     try {
       const { error } = await authClient.signIn.email({
         email,
         password,
-        callbackURL: "/",
+        callbackURL,
       });
 
       if (error) {
@@ -47,8 +72,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/");
       toast.success("Welcome back to StudioSpace!");
+      router.replace(callbackURL);
       router.refresh();
     } catch {
       toast.error(
@@ -58,13 +83,18 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
   const handleGoogleLogin = async () => {
+    if (isLoading || isGoogleLoading) return;
+
     setIsGoogleLoading(true);
+
+    const callbackURL = getSafeCallbackURL();
 
     try {
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${process.env.NEXT_PUBLIC_APP_URL}/`,
+        callbackURL: `${window.location.origin}${callbackURL}`,
       });
 
       if (error) {
@@ -77,6 +107,7 @@ export default function LoginPage() {
       setIsGoogleLoading(false);
     }
   };
+
   return (
     <main className="min-h-screen bg-background px-4 py-10 md:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-xl lg:grid-cols-2">
@@ -176,7 +207,7 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     required
-                    disabled={isLoading}
+                    disabled={isLoading || isGoogleLoading}
                     className="h-12 rounded-xl bg-background pl-11"
                   />
                 </div>
@@ -195,7 +226,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     required
-                    disabled={isLoading}
+                    disabled={isLoading || isGoogleLoading}
                     className="h-12 rounded-xl bg-background pl-11 pr-12"
                   />
 
