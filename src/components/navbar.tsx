@@ -64,6 +64,83 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+// ==========================================
+// 1. UserProfileDropdown এখন বাইরে ডিক্লেয়ার করা হয়েছে
+// ==========================================
+interface UserProfileDropdownProps {
+  userName: string;
+  userImage: string;
+  isLoggingOut: boolean;
+  handleLogout: () => void;
+  renderAccountLinks: (mobile?: boolean) => React.ReactNode;
+}
+
+function UserProfileDropdown({
+  userName,
+  userImage,
+  isLoggingOut,
+  handleLogout,
+  renderAccountLinks,
+}: UserProfileDropdownProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Open account menu"
+            className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          />
+        }
+      >
+        <Avatar className="h-8 w-8 border border-border ring-2 ring-primary/15">
+          <AvatarImage src={userImage} alt={userName} />
+
+          <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
+            {userName.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+
+        <span className="hidden max-w-28 truncate text-sm font-medium sm:inline-block">
+          {userName}
+        </span>
+
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={10}
+        className="w-56 rounded-2xl p-1.5 shadow-xl"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
+            {userName}
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>{renderAccountLinks(false)}</DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={isLoggingOut}
+            onClick={handleLogout}
+            className="cursor-pointer rounded-lg px-2 py-1.5"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function NavbarContent() {
   const pathname = usePathname();
   const router = useRouter();
@@ -277,67 +354,29 @@ function NavbarContent() {
                 </motion.div>
               </>
             ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label="Open account menu"
-                      className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 outline-none transition-colors hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    />
-                  }
-                >
-                  <Avatar className="h-8 w-8 border border-border ring-2 ring-primary/15">
-                    <AvatarImage src={userImage} alt={userName} />
-
-                    <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
-                      {userName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <span className="max-w-28 truncate text-sm font-medium">
-                    {userName}
-                  </span>
-
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={10}
-                  className="w-56 rounded-2xl p-1.5 shadow-xl"
-                >
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="px-2 py-1.5 font-heading text-base text-foreground">
-                      {userName}
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuGroup>{renderAccountLinks()}</DropdownMenuGroup>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      disabled={isLoggingOut}
-                      onClick={handleLogout}
-                      className="cursor-pointer rounded-lg px-2 py-1.5"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      {isLoggingOut ? "Logging out..." : "Logout"}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserProfileDropdown
+                userName={userName}
+                userImage={userImage}
+                isLoggingOut={isLoggingOut}
+                handleLogout={handleLogout}
+                renderAccountLinks={renderAccountLinks}
+              />
             )}
           </div>
 
           {/* Mobile actions */}
           <div className="flex items-center gap-1.5 md:hidden">
             <ThemeToggle />
+
+            {!isPending && isAuthenticated && (
+              <UserProfileDropdown
+                userName={userName}
+                userImage={userImage}
+                isLoggingOut={isLoggingOut}
+                handleLogout={handleLogout}
+                renderAccountLinks={renderAccountLinks}
+              />
+            )}
 
             <Sheet>
               <SheetTrigger asChild>
@@ -411,28 +450,7 @@ function NavbarContent() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {/* Mobile user profile */}
-                    <div className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
-                      <Avatar className="h-10 w-10 border border-border">
-                        <AvatarImage src={userImage} alt={userName} />
-
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {userName.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {userName}
-                        </p>
-
-                        <p className="text-xs text-muted-foreground">
-                          Signed in
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Mobile account navigation */}
+                    {/* Mobile account navigation inside sheet */}
                     <nav
                       aria-label="Mobile account navigation"
                       className="flex flex-col gap-1"
