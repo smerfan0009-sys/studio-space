@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
@@ -45,15 +46,23 @@ const categories = [
 
 type SortOption = "newest" | "rating" | "price-low" | "price-high";
 
-export default function StudiosPage() {
+function StudiosContent() {
+  const searchParams = useSearchParams();
+
+  const requestedCategory = searchParams.get("category");
+
+  const initialCategory = categories.includes(requestedCategory || "")
+    ? requestedCategory!
+    : "All Studios";
+
   const [studios, setStudios] = useState<Studio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All Studios");
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  // Fetch studios. The optional signal allows cleanup on unmount.
+  // Fetch studios for retry.
   const loadStudios = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
@@ -100,7 +109,7 @@ export default function StudiosPage() {
     }
   }, []);
 
-  // Initial fetch: state updates happen after the async request completes.
+  // Initial fetch.
   useEffect(() => {
     const controller = new AbortController();
 
@@ -129,6 +138,7 @@ export default function StudiosPage() {
 
         if (!controller.signal.aborted) {
           setStudios(studioList);
+          setError("");
         }
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -147,14 +157,13 @@ export default function StudiosPage() {
       }
     };
 
-    load();
+    void load();
 
     return () => {
       controller.abort();
     };
   }, []);
 
-  // Retry handler
   const handleRetry = () => {
     void loadStudios();
   };
@@ -443,12 +452,10 @@ export default function StudiosPage() {
                 >
                   {/* Image */}
                   <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-indigo-100 to-pink-100 dark:from-indigo-950 dark:to-purple-950">
-                    {/* Fallback */}
                     <div className="absolute inset-0 z-0 flex items-center justify-center">
                       <Camera size={45} className="text-indigo-400/60" />
                     </div>
 
-                    {/* Studio Image */}
                     {studio.imageUrl && (
                       <img
                         src={studio.imageUrl}
@@ -461,12 +468,10 @@ export default function StudiosPage() {
                       />
                     )}
 
-                    {/* Category */}
                     <span className="absolute left-4 top-4 z-20 rounded-full border border-white/50 bg-white/90 px-3 py-1.5 text-xs font-bold text-indigo-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-[#1c1a27]/90 dark:text-indigo-300">
                       {studio.category}
                     </span>
 
-                    {/* Rating */}
                     <div className="absolute right-4 top-4 z-20 flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-gray-800 shadow-sm backdrop-blur-md dark:bg-[#1c1a27]/95 dark:text-white">
                       <Star
                         size={13}
@@ -527,5 +532,31 @@ export default function StudiosPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function StudiosPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#f6f4f0] px-5 py-24 dark:bg-[#12111a] sm:px-8">
+          <div className="mx-auto max-w-7xl animate-pulse">
+            <div className="mx-auto h-10 max-w-md rounded-xl bg-gray-200 dark:bg-white/10" />
+            <div className="mx-auto mt-5 h-5 max-w-xl rounded-lg bg-gray-200 dark:bg-white/10" />
+
+            <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-64 rounded-3xl bg-gray-200 dark:bg-white/10"
+                />
+              ))}
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <StudiosContent />
+    </Suspense>
   );
 }
